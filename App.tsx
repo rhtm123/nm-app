@@ -6,17 +6,25 @@
  */
 
 import React from 'react';
+import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
+import { LightTheme, DarkTheme } from './src/theme';
+import { StatusBar } from 'react-native';
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function App() {
+    const [darkMode, setDarkMode] = useState(false); // toggle this with a button or switch
+
   return (
+    <>
+    <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
+      <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
         <RootNavigator />
       </NavigationContainer>
     </GestureHandlerRootView>
+  </>
   );
 }
