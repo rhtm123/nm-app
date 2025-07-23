@@ -11,8 +11,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
 import { LightTheme, DarkTheme } from './src/theme';
 import { StatusBar } from 'react-native';
-
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { CartProvider } from './src/context/CartContext';
+import { AuthProvider } from './src/context/AuthContext';
 
 export default function App() {
     const [darkMode, setDarkMode] = useState(false); // toggle this with a button or switch
@@ -21,9 +22,13 @@ export default function App() {
     <>
     <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
-        <RootNavigator />
-      </NavigationContainer>
+      <AuthProvider>
+        <CartProvider>
+          <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+        </CartProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   </>
   );
