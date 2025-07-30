@@ -1,305 +1,321 @@
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator } from "react-native"
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions } from "react-native"
+import { useState } from "react"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import Header from "../components/Header"
 import ProductCard from "../components/ProductCard"
-import { heroProducts } from "../data/sampleData";
-import { products, categories, brands, bestSellingProducts, testimonials } from "../data/sampleData"
+import LoadingSpinner from "../components/LoadingSpinner"
+import ErrorMessage from "../components/ErrorMessage"
+import { useProductListings, useCategories, useFeaturedProducts } from "../hooks/useProducts"
 import { colors, spacing, typography } from "../theme"
-import React, { useState } from "react";
+import Header from '../components/Header';
 
 const { width } = Dimensions.get("window")
 
+// --- Product Card (Reusable) ---
+const ProductCardModern = ({ item, navigation }) => (
+  <TouchableOpacity onPress={() => navigation.navigate('ProductDetail', { productListing: item })} activeOpacity={0.8}>
+    <View style={stylesModern.productCard}>
+      <Image
+        source={item.main_image ? { uri: item.main_image } : require('../../assets/placeholder.png')}
+        style={stylesModern.productImage}
+        resizeMode="cover"
+      />
+      <Text style={stylesModern.productName} numberOfLines={2}>{item.name}</Text>
+      <Text style={stylesModern.productPrice}>{item.price ? `₹${item.price}` : 'Contact for price'}</Text>
+      <TouchableOpacity style={stylesModern.addButton}>
+        <Text style={stylesModern.addButtonText}>ADD</Text>
+      </TouchableOpacity>
+    </View>
+  </TouchableOpacity>
+)
+
+// --- Category Card (Reusable) ---
+const CategoryCardModern = ({ item, navigation }) => (
+  <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: item })} activeOpacity={0.8}>
+    <View style={stylesModern.categoryCard}>
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={stylesModern.categoryImage} resizeMode="cover" />
+      ) : (
+        <Ionicons name="cube" size={32} color={colors.primary} />
+      )}
+      <Text style={stylesModern.categoryName} numberOfLines={2}>{item.name}</Text>
+    </View>
+  </TouchableOpacity>
+)
+
 const HomeScreen = () => {
-  const navigation = useNavigation();
-  const [visibleProductCount, setVisibleProductCount] = useState(2);
+  const navigation = useNavigation()
+  const [refreshing, setRefreshing] = useState(false)
 
-  const handleLoadMoreProducts = () => {
-    if (visibleProductCount < products.length) {
-      setVisibleProductCount((prev) => Math.min(prev + 2, products.length));
-    }
-  };
+  // Fetch data using custom hooks
+  const {
+    data: productsData,
+    loading: productsLoading,
+    error: productsError,
+    refetch: refetchProducts,
+  } = useProductListings({ page_size: 20 })
+  const {
+    data: categoriesData,
+    loading: categoriesLoading,
+    refetch: refetchCategories,
+  } = useCategories({ page_size: 10 })
+  const { featuredProducts, loading: featuredLoading, error: featuredError } = useFeaturedProducts()
 
-  const renderHeroSection = () => (
-    <View style={styles.heroSection}>
+  const products = productsData?.results || []
+  const categories = categoriesData?.results || []
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([refetchProducts(), refetchCategories()])
+    setRefreshing(false)
+  }
+
+  // --- Update renderMainCategories ---
+  const renderMainCategories = () => (
+    <View style={stylesModern.section}>
       <FlatList
-        data={heroProducts}
+        data={categories.slice(0, 5)}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.heroCard}>
-            {/* Deal Badge */}
-            {item.dealBadge && (
-              <View style={styles.dealBadge}>
-                <Text style={styles.dealBadgeText}>{item.dealBadge}</Text>
-              </View>
-            )}
-            {/* Discount Badge */}
-            {item.discount && (
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>{item.discount}</Text>
-              </View>
-            )}
-            {/* Product Image */}
-            <View style={styles.heroImageContainer}>
-              <Image source={{ uri: item.image }} style={styles.heroImage} />
-            </View>
-            {/* Product Info */}
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroProductName}>{item.name}</Text>
-              {/* Rating */}
-              <View style={styles.heroRating}>
-                <View style={styles.stars}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Ionicons
-                      key={star}
-                      name={star <= item.rating ? "star" : "star-outline"}
-                      size={16}
-                      color={colors.warning}
-                    />
-                  ))}
-                </View>
-                <Text style={styles.ratingText}>({item.rating})</Text>
-                <Text style={styles.reviewsText}>{item.reviews} reviews</Text>
-              </View>
-              {/* Price */}
-              <View style={styles.heroPriceContainer}>
-                <Text style={styles.heroPrice}>₹{item.price}</Text>
-                <Text style={styles.heroOriginalPrice}>₹{item.originalPrice}</Text>
-              </View>
-              {/* Stock Status */}
-              {item.inStock && <Text style={styles.stockStatus}>✓ In Stock</Text>}
-              {/* Get This Deal Button */}
-              <TouchableOpacity
-                style={styles.dealButton}
-                onPress={() => navigation.navigate("ProductDetail", { product: item })}
-              >
-                <Ionicons name="bag-add" size={20} color={colors.background} />
-                <Text style={styles.dealButtonText}>Get This Deal</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        contentContainerStyle={{ paddingRight: 0 }}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        snapToInterval={width - spacing.md * 2}
-        getItemLayout={(_, index) => ({ length: width - spacing.md * 2, offset: (width - spacing.md * 2) * index, index })}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => <CategoryCardModern item={item} navigation={navigation} />}
+        contentContainerStyle={stylesModern.horizontalList}
+        ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
       />
     </View>
   )
 
-  const renderCategories = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Shop from Top Categories</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAllText}>View All ›</Text>
+  const renderPromotionalBanner = () => (
+    <View style={styles.promotionalBanner}>
+      <View style={styles.bannerContent}>
+        <Text style={styles.bannerTitle}>Hariyali Teej</Text>
+        <Text style={styles.bannerSubtitle}>Celebrate with us</Text>
+        <TouchableOpacity style={styles.bannerButton}>
+          <Text style={styles.bannerButtonText}>Shop Now</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.bannerImage}>
+        <Ionicons name="flower" size={40} color={colors.background} />
+      </View>
+    </View>
+  )
 
-      <View style={styles.categoriesContainer}>
-        {categories.map((category) => (
-          <TouchableOpacity key={category.id} style={styles.categoryItem}>
-            <View style={styles.categoryIcon}>
-              <Text style={styles.categoryEmoji}>{category.icon}</Text>
+  const renderSubPromotions = () => (
+    <View style={styles.subPromotionsSection}>
+      <FlatList
+        data={[
+          { title: "Shimmer & Mehndi", icon: "sparkles", color: "#FF6B6B" },
+          { title: "Gifts Corner", icon: "gift", color: "#4ECDC4" },
+          { title: "Teej Specials", icon: "heart", color: "#45B7D1" }
+        ]}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View style={[styles.subPromotionCard, { backgroundColor: item.color }]}>
+            <Ionicons name={item.icon} size={24} color={colors.background} />
+            <Text style={styles.subPromotionText}>{item.title}</Text>
+          </View>
+        )}
+        contentContainerStyle={styles.subPromotionsList}
+      />
+    </View>
+  )
+
+  // --- Update renderPreviouslyBought ---
+  const renderPreviouslyBought = () => {
+    if (productsLoading) return <LoadingSpinner />
+    if (productsError) return <ErrorMessage message={productsError} onRetry={refetchProducts} />
+    if (!products || products.length === 0) return null
+
+    return (
+      <View style={stylesModern.section}>
+        <View style={stylesModern.sectionHeader}>
+          <Text style={stylesModern.sectionTitle}>Previously bought</Text>
+          <TouchableOpacity>
+            <Text style={stylesModern.viewAllText}>See all products</Text>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          data={products.slice(0, 5)}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <ProductCardModern item={item} navigation={navigation} />}
+          contentContainerStyle={stylesModern.horizontalList}
+          ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        />
+      </View>
+    )
+  }
+
+  const renderFeaturedWeek = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Featured this week</Text>
+      <FlatList
+        data={[
+          { title: "Family Essentials", color: "#FF9500", icon: "people" },
+          { title: "Saddhnu Sawan", color: "#007AFF", icon: "leaf" },
+          { title: "TRENDING NEAR YOU", color: "#5856D6", icon: "trending-up" }
+        ]}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View style={[styles.featuredCard, { backgroundColor: item.color }]}>
+            <Ionicons name={item.icon} size={24} color={colors.background} />
+            <Text style={styles.featuredCardText}>{item.title}</Text>
+          </View>
+        )}
+        contentContainerStyle={styles.featuredList}
+      />
+    </View>
+  )
+
+  const renderMegaSale = () => (
+    <View style={styles.megaSaleSection}>
+      <View style={styles.megaSaleBanner}>
+        <Text style={styles.megaSaleTitle}>MEGA CLEANING SALE</Text>
+        <Text style={styles.megaSaleSubtitle}>Powered by top brands</Text>
+        <TouchableOpacity style={styles.megaSaleButton}>
+          <Text style={styles.megaSaleButtonText}>Shop Now</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.megaSaleSubCards}>
+        <View style={styles.megaSaleSubCard}>
+          <Text style={styles.megaSaleSubCardTitle}>Starting at ₹99</Text>
+        </View>
+        <View style={styles.megaSaleSubCard}>
+          <Text style={styles.megaSaleSubCardTitle}>Cleaning & Hygiene</Text>
+        </View>
+        <View style={styles.megaSaleSubCard}>
+          <Text style={styles.megaSaleSubCardTitle}>Laundry & Freshness</Text>
+        </View>
+      </View>
+    </View>
+  )
+
+  // --- Update renderCategoryGrid ---
+  const renderCategoryGrid = () => {
+    if (categoriesLoading) return <LoadingSpinner />
+    if (!categories || categories.length === 0) return null
+
+    const categoryGroups = [
+      { title: "Grocery & Kitchen", categories: categories.slice(0, 4) },
+      { title: "Snacks & Drinks", categories: categories.slice(4, 8) },
+      { title: "Beauty & Personal Care", categories: categories.slice(0, 4) },
+      { title: "Household Essentials", categories: categories.slice(4, 8) }
+    ]
+
+    return (
+      <View style={stylesModern.section}>
+        {categoryGroups.map((group, index) => (
+          <View key={index} style={stylesModern.categoryGroup}>
+            <Text style={stylesModern.categoryGroupTitle}>{group.title}</Text>
+            <View style={stylesModern.categoryGrid}>
+              {group.categories.map((category) => (
+                <CategoryCardModern key={category.id} item={category} navigation={navigation} />
+              ))}
             </View>
-            <Text style={styles.categoryName}>{category.name}</Text>
+          </View>
+        ))}
+      </View>
+    )
+  }
+
+  const renderZomatoVoucher = () => (
+    <View style={styles.zomatoVoucherSection}>
+      <View style={styles.zomatoVoucherCard}>
+        <View style={styles.zomatoVoucherContent}>
+          <Text style={styles.zomatoVoucherTitle}>zomato voucher worth ₹100</Text>
+          <Text style={styles.zomatoVoucherSubtitle}>on Blinkit orders above ₹799</Text>
+        </View>
+        <View style={styles.zomatoVoucherIcon}>
+          <Ionicons name="restaurant" size={32} color={colors.background} />
+        </View>
+      </View>
+    </View>
+  )
+
+  const renderShopByStore = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Shop by store</Text>
+      <View style={styles.storeGrid}>
+        {[
+          { name: "Spiritual Store", icon: "flower" },
+          { name: "Pharma Store", icon: "medical" },
+          { name: "Pet Store", icon: "paw" },
+          { name: "Sports Store", icon: "football" },
+          { name: "Toy Store", icon: "game-controller" }
+        ].map((store, index) => (
+          <TouchableOpacity key={index} style={styles.storeItem}>
+            <View style={styles.storeIcon}>
+              <Ionicons name={store.icon} size={24} color={colors.primary} />
+            </View>
+            <Text style={styles.storeName}>{store.name}</Text>
           </TouchableOpacity>
         ))}
       </View>
     </View>
   )
 
-  const renderProductsSection = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Grab the best deal on Our Products</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAllText}>View All ›</Text>
-        </TouchableOpacity>
-      </View>
+  // --- Update renderProductSection ---
+  const renderProductSection = (title, products, showRating = true) => {
+    if (productsLoading) return <LoadingSpinner />
+    if (productsError) return <ErrorMessage message={productsError} onRetry={refetchProducts} />
+    if (!products || products.length === 0) return null
 
-      <FlatList
-        data={products}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            onPress={() => navigation.navigate("ProductDetail", { product: item })}
-            style={styles.horizontalProductCard}
-          />
-        )}
-        contentContainerStyle={styles.horizontalList}
-      />
+    return (
+      <View style={stylesModern.section}>
+        <Text style={stylesModern.sectionTitle}>{title}</Text>
+        <FlatList
+          data={products.slice(0, 6)}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <ProductCardModern item={item} navigation={navigation} />}
+          contentContainerStyle={stylesModern.horizontalList}
+          ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        />
+      </View>
+    )
+  }
+
+  const renderBottomBanner = () => (
+    <View style={styles.bottomBanner}>
+      <View style={styles.bottomBannerContent}>
+        <Text style={styles.bottomBannerTitle}>Free Gift on Cleaning Essentials</Text>
+        <Text style={styles.bottomBannerSubtitle}>on orders above ₹499</Text>
+      </View>
+      <TouchableOpacity style={styles.closeButton}>
+        <Ionicons name="close" size={20} color={colors.text.primary} />
+      </TouchableOpacity>
     </View>
   )
-
-  const renderBrands = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Shop from Top Brands</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAllText}>View All ›</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.brandsContainer}>
-        {brands.map((brand) => (
-          <TouchableOpacity key={brand.id} style={styles.brandItem}>
-            <View style={styles.brandLogo}>
-              <Image source={{ uri: brand.logo }} style={styles.brandImage} />
-            </View>
-            <Text style={styles.brandName}>{brand.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  )
-
-  const renderBestSelling = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Discover our Best Selling</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAllText}>View All ›</Text>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={bestSellingProducts}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            onPress={() => navigation.navigate("ProductDetail", { product: item })}
-            style={styles.horizontalProductCard}
-          />
-        )}
-        contentContainerStyle={styles.horizontalList}
-      />
-    </View>
-  )
-
-  const renderTestimonials = () => (
-    <View style={styles.testimonialsSection}>
-      <Text style={styles.testimonialsTitle}>WHAT OUR CUSTOMERS SAY</Text>
-
-      <FlatList
-        data={testimonials}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.testimonialCard}>
-            <View style={styles.testimonialHeader}>
-              <Image source={{ uri: item.avatar }} style={styles.avatar} />
-              <View style={styles.testimonialInfo}>
-                <Text style={styles.testimonialName}>{item.name}</Text>
-                <View style={styles.testimonialRating}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Ionicons
-                      key={star}
-                      name={star <= item.rating ? "star" : "star-outline"}
-                      size={14}
-                      color={colors.warning}
-                    />
-                  ))}
-                </View>
-              </View>
-            </View>
-            <Text style={styles.testimonialComment}>{item.comment}</Text>
-          </View>
-        )}
-        contentContainerStyle={styles.testimonialsContainer}
-      />
-    </View>
-  )
-
-  const cardGap = spacing.md;
-  const cardWidth = (width - cardGap * 3) / 2;
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {renderHeroSection()}
-        {renderCategories()}
-        {renderProductsSection()}
-        {renderBrands()}
-        {renderBestSelling()}
-        {renderTestimonials()}
-
-        {/* All Products Infinite Scroll Section */}
-        <View style={styles.allProductsSection}>
-          <Text style={styles.sectionTitle}>All Products</Text>
-          <FlatList
-            style={{ width: '100%' }}
-            data={products.slice(0, visibleProductCount)}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            renderItem={({ item, index }) => (
-              <ProductCard
-                product={item}
-                onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                style={[
-                  styles.verticalProductCard,
-                  { width: cardWidth, marginLeft: cardGap, marginRight: index % 2 === 1 ? cardGap : 0 },
-                ]}
-              />
-            )}
-            onEndReached={handleLoadMoreProducts}
-            onEndReachedThreshold={0.5}
-            scrollEnabled={false}
-            contentContainerStyle={{ paddingBottom: 32 }}
-          />
-        </View>
-
-        {/* Footer
-        <View style={styles.footer}>
-          <View style={styles.footerContent}>
-            <View style={styles.footerSection}>
-              <Text style={styles.footerTitle}>NM Naigaon Market</Text>
-              <Text style={styles.footerText}>
-                Naigaon Market promotes a circular economy where money spent stays within the community. It helps small
-                businesses embrace digital tools, preparing them for larger markets, and fosters local economic growth.
-              </Text>
-              <Text style={styles.footerContact}>📞 +91-93703-94747</Text>
-              <Text style={styles.footerAddress}>
-                Address: 205, Jag Vijay Building 3, Naigaon East, Maharashtra, India
-              </Text>
-              <Text style={styles.footerEmail}>naigaonmarket@gmail.com</Text>
-            </View>
-
-            <View style={styles.footerLinks}>
-              <View style={styles.footerColumn}>
-                <Text style={styles.footerColumnTitle}>Quick Links</Text>
-                <Text style={styles.footerLink}>About</Text>
-                <Text style={styles.footerLink}>Shop</Text>
-                <Text style={styles.footerLink}>Contact</Text>
-                <Text style={styles.footerLink}>Blog</Text>
-              </View>
-
-              <View style={styles.footerColumn}>
-                <Text style={styles.footerColumnTitle}>Resources</Text>
-                <Text style={styles.footerLink}>Terms of Service</Text>
-                <Text style={styles.footerLink}>Privacy Policy</Text>
-                <Text style={styles.footerLink}>Shipping Policy</Text>
-                <Text style={styles.footerLink}>Return Policy</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.footerBottom}>
-            <Text style={styles.copyright}>© 2025 Naigaon Market. All rights reserved.</Text>
-          </View>
-        </View> */}
+      <Header title="Naigaon Market" showSearch navigation={navigation} />
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Header is now handled by the navigation stack */}
+        {renderMainCategories()}
+        {renderPromotionalBanner()}
+        {renderSubPromotions()}
+        {renderPreviouslyBought()}
+        {renderFeaturedWeek()}
+        {renderMegaSale()}
+        {renderCategoryGrid()}
+        {renderZomatoVoucher()}
+        {renderShopByStore()}
+        {renderProductSection("Define your style", products, false)}
+        {renderProductSection("Price drop!", products)}
+        {renderProductSection("Start your day right", products, false)}
       </ScrollView>
+      {renderBottomBanner()}
     </View>
   )
 }
@@ -313,363 +329,584 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Hero Section
-  heroSection: {
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.lg,
-  },
-  heroCard: {
-    backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: spacing.lg,
-    marginHorizontal: spacing.md / 2,
-    width: width - spacing.md * 2,
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-    alignSelf: "center",
-  },
-  dealBadge: {
-    position: "absolute",
-    top: spacing.sm,
-    left: spacing.sm,
-    backgroundColor: colors.success,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 4,
-    zIndex: 1,
-  },
-  dealBadgeText: {
-    color: colors.background,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-  },
-  discountBadge: {
-    position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: colors.deal,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 4,
-    zIndex: 1,
-  },
-  discountText: {
-    color: colors.background,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-  },
-  heroImageContainer: {
-    alignItems: "center",
-    marginVertical: spacing.md,
-  },
-  heroImage: {
-    width: 160,
-    height: 160,
-    resizeMode: "contain",
-  },
-  heroInfo: {
-    alignItems: "center",
-  },
-  heroProductName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
-  heroRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  stars: {
-    flexDirection: "row",
-    marginRight: spacing.xs,
-  },
-  ratingText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-    marginRight: spacing.xs,
-  },
-  reviewsText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.light,
-  },
-  heroPriceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  heroPrice: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginRight: spacing.sm,
-  },
-  heroOriginalPrice: {
-    fontSize: typography.sizes.lg,
-    color: colors.text.light,
-    textDecorationLine: "line-through",
-  },
-  stockStatus: {
-    fontSize: typography.sizes.sm,
-    color: colors.success,
-    marginBottom: spacing.md,
-  },
-  dealButton: {
-    flexDirection: "row",
-    alignItems: "center",
+  // Header
+  header: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
+    paddingTop: 40,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
-  dealButtonText: {
+  deliveryInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  deliveryText: {
+    color: colors.background,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    marginLeft: spacing.xs,
+  },
+  locationText: {
     color: colors.background,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    marginLeft: spacing.xs,
-  },
-
-  // Section Styles
-  section: {
-    padding: spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: spacing.md,
   },
-  sectionTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
-  viewAllText: {
-    fontSize: typography.sizes.md,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
+  searchPlaceholder: {
+    flex: 1,
+    marginLeft: spacing.sm,
+    color: colors.text.secondary,
+    fontSize: typography.sizes.sm,
+  },
+  userIcons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  userIcon: {
+    marginLeft: spacing.md,
   },
 
-  // Categories
-  categoriesContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+  // Main Categories
+  mainCategoriesSection: {
+    backgroundColor: colors.background,
+    paddingVertical: spacing.md,
   },
-  categoryItem: {
-    alignItems: "center",
-    width: (width - spacing.md * 2) / 4,
+  mainCategoriesList: {
+    paddingHorizontal: spacing.md,
   },
-  categoryIcon: {
+  mainCategoryItem: {
+    alignItems: 'center',
+    marginRight: spacing.lg,
+  },
+  mainCategoryIcon: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  categoryEmoji: {
-    fontSize: 24,
+  mainCategoryImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
-  categoryName: {
-    fontSize: typography.sizes.sm,
+  mainCategoryName: {
+    fontSize: typography.sizes.xs,
     color: colors.text.primary,
-    textAlign: "center",
+    textAlign: 'center',
     fontWeight: typography.weights.medium,
   },
 
-  // Products
-  horizontalList: {
-    paddingRight: spacing.md,
+  // Promotional Banner
+  promotionalBanner: {
+    backgroundColor: colors.success,
+    margin: spacing.md,
+    borderRadius: 12,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  horizontalProductCard: {
-    marginRight: spacing.md,
-    width: 180,
+  bannerContent: {
+    flex: 1,
   },
-
-  // Brands
-  brandsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  brandItem: {
-    alignItems: "center",
-    width: (width - spacing.md * 2) / 4,
-    marginBottom: spacing.md,
-  },
-  brandLogo: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
+  bannerTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.background,
     marginBottom: spacing.xs,
   },
-  brandImage: {
-    width: 40,
-    height: 40,
-    resizeMode: "contain",
+  bannerSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.background,
+    marginBottom: spacing.md,
   },
-  brandName: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.primary,
-    textAlign: "center",
+  bannerButton: {
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  bannerButtonText: {
+    color: colors.success,
+    fontWeight: typography.weights.semibold,
+  },
+  bannerImage: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  // Testimonials
-  testimonialsSection: {
-    padding: spacing.md,
-    backgroundColor: colors.surface,
+  // Sub Promotions
+  subPromotionsSection: {
+    marginBottom: spacing.md,
   },
-  testimonialsTitle: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    textAlign: "center",
+  subPromotionsList: {
+    paddingHorizontal: spacing.md,
+  },
+  subPromotionCard: {
+    padding: spacing.md,
+    borderRadius: 8,
+    marginRight: spacing.md,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  subPromotionText: {
+    color: colors.background,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+
+  // Sections
+  section: {
     marginBottom: spacing.lg,
   },
-  testimonialsContainer: {
-    paddingRight: spacing.md,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
   },
-  testimonialCard: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: spacing.md,
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
+  },
+  viewAllText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
+
+  // Previously Bought
+  previouslyBoughtList: {
+    paddingHorizontal: spacing.md,
+  },
+  previouslyBoughtCard: {
+    width: 120,
     marginRight: spacing.md,
-    width: width * 0.8,
-    shadowColor: "#000",
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: spacing.sm,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  testimonialHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
+  previouslyBoughtImage: {
+    width: '100%',
+    height: 80,
+    borderRadius: 6,
+    marginBottom: spacing.xs,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: spacing.sm,
-  },
-  testimonialInfo: {
-    flex: 1,
-  },
-  testimonialName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+  previouslyBoughtName: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium,
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },
-  testimonialRating: {
-    flexDirection: "row",
-  },
-  testimonialComment: {
+  previouslyBoughtPrice: {
     fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-    lineHeight: 20,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
 
-  // View All Products Section
-  allProductsSection: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: 0,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    margin: spacing.md,
-    marginTop: 0,
+  // Featured Week
+  featuredList: {
+    paddingHorizontal: spacing.md,
   },
-  viewAllProductsButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
+  featuredCard: {
+    padding: spacing.md,
     borderRadius: 8,
-    alignItems: "center",
-    marginVertical: spacing.md,
+    marginRight: spacing.md,
+    alignItems: 'center',
+    minWidth: 120,
   },
-  viewAllProductsButtonText: {
+  featuredCardText: {
     color: colors.background,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
-  verticalProductCard: {
+
+  // Mega Sale
+  megaSaleSection: {
+    margin: spacing.md,
+  },
+  megaSaleBanner: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
     marginBottom: spacing.md,
   },
-
-  // Footer
-  footer: {
-    backgroundColor: colors.text.primary,
-    padding: spacing.lg,
-  },
-  footerContent: {
-    marginBottom: spacing.lg,
-  },
-  footerSection: {
-    marginBottom: spacing.lg,
-  },
-  footerTitle: {
+  megaSaleTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.background,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  footerText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.light,
-    lineHeight: 20,
-    marginBottom: spacing.sm,
-  },
-  footerContact: {
-    fontSize: typography.sizes.sm,
+  megaSaleSubtitle: {
+    fontSize: typography.sizes.md,
     color: colors.background,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
   },
-  footerAddress: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.light,
-    marginBottom: spacing.xs,
+  megaSaleButton: {
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
-  footerEmail: {
-    fontSize: typography.sizes.sm,
+  megaSaleButtonText: {
     color: colors.primary,
+    fontWeight: typography.weights.semibold,
   },
-  footerLinks: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  megaSaleSubCards: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  footerColumn: {
+  megaSaleSubCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 8,
+    marginHorizontal: spacing.xs,
+    alignItems: 'center',
+  },
+  megaSaleSubCardTitle: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+
+  // Category Grid
+  categoryGridSection: {
+    marginBottom: spacing.lg,
+  },
+  categoryGroup: {
+    marginBottom: spacing.lg,
+  },
+  categoryGroupTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+  },
+  categoryGridItem: {
+    width: (width - spacing.md * 3) / 4,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  categoryGridIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  categoryGridImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  categoryGridName: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.primary,
+    textAlign: 'center',
+    fontWeight: typography.weights.medium,
+  },
+
+  // Zomato Voucher
+  zomatoVoucherSection: {
+    margin: spacing.md,
+  },
+  zomatoVoucherCard: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 12,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  zomatoVoucherContent: {
     flex: 1,
   },
-  footerColumnTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+  zomatoVoucherTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
     color: colors.background,
-    marginBottom: spacing.sm,
-  },
-  footerLink: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.light,
     marginBottom: spacing.xs,
   },
-  footerBottom: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-    alignItems: "center",
-  },
-  copyright: {
+  zomatoVoucherSubtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.text.light,
+    color: colors.background,
+  },
+  zomatoVoucherIcon: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Store Grid
+  storeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+  },
+  storeItem: {
+    width: (width - spacing.md * 3) / 3,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  storeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  storeName: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.primary,
+    textAlign: 'center',
+    fontWeight: typography.weights.medium,
+  },
+
+  // Product Cards
+  productList: {
+    paddingHorizontal: spacing.md,
+  },
+  productCard: {
+    width: 140,
+    marginRight: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  productImage: {
+    width: '100%',
+    height: 100,
+    borderRadius: 6,
+    marginBottom: spacing.xs,
+  },
+  productName: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  productPrice: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  productRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  ratingText: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    marginLeft: spacing.xs,
+  },
+
+  // Add Button
+  addButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.xs,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: colors.background,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+  },
+
+  // Bottom Banner
+  bottomBanner: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  bottomBannerContent: {
+    flex: 1,
+  },
+  bottomBannerTitle: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.background,
+  },
+  bottomBannerSubtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.background,
+  },
+  closeButton: {
+    padding: spacing.xs,
+  },
+})
+
+// --- Modern Styles ---
+const stylesModern = StyleSheet.create({
+  section: {
+    marginBottom: 28,
+    paddingTop: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  horizontalList: {
+    paddingHorizontal: 20,
+  },
+  // Product Card
+  productCard: {
+    width: 150,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  productImage: {
+    width: 120,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f2f2f2',
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: 8,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  // Category Card
+  categoryCard: {
+    width: 100,
+    height: 120,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+    marginRight: 12,
+  },
+  categoryImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginBottom: 8,
+    backgroundColor: '#f2f2f2',
+  },
+  categoryName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  // Category Grid
+  categoryGroup: {
+    marginBottom: 18,
+  },
+  categoryGroupTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
   },
 })
 

@@ -24,9 +24,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <CartProvider>
-          <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
-            <RootNavigator />
-          </NavigationContainer>
+      <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
+        <RootNavigator />
+      </NavigationContainer>
         </CartProvider>
       </AuthProvider>
     </GestureHandlerRootView>

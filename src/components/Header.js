@@ -3,6 +3,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, spacing, typography } from "../theme"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
+import InitialsAvatar from './InitialsAvatar';
 
 const Header = ({ navigation, showSearch = true, title = null }) => {
   const { getCartItemsCount } = useCart()
@@ -35,7 +36,11 @@ const Header = ({ navigation, showSearch = true, title = null }) => {
         <View style={styles.rightActions}>
           {/* Sign In/Profile */}
           <TouchableOpacity style={styles.actionButton} onPress={() => navigation?.navigate("Profile")}>
-            <Ionicons name={user ? "person" : "person-outline"} size={24} color={colors.primary} />
+            {user ? (
+              <InitialsAvatar name={user.name || user.username || ''} size={32} style={{ marginTop: 2, borderWidth: 2, borderColor: colors.primary }} />
+            ) : (
+              <Ionicons name="person-outline" size={24} color={colors.primary} />
+            )}
             <Text style={styles.actionText}>{user ? "Profile" : "Sign In"}</Text>
           </TouchableOpacity>
 

@@ -1,16 +1,21 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from "react-native"
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from "react-native-vector-icons/Ionicons"
 import { colors, spacing, typography } from "../theme"
 import { useCart } from "../context/CartContext"
 
 const { width } = Dimensions.get("window")
 const cardWidth = (width - spacing.md * 3) / 2
 
-const ProductCard = ({ product, onPress, style }) => {
-  const { addToCart } = useCart()
+const ProductCard = ({ productListing, onPress, style }) => {
+  console.log('ProductCard render:', productListing);
+  const { addToCart, isInCart, getCartItemQuantity } = useCart()
 
-  const handleAddToCart = () => {
-    addToCart(product)
+  const handleAddToCart = async () => {
+    const result = await addToCart(productListing)
+    if (result.success) {
+      // You can show a toast or success message here
+      console.log("Added to cart successfully")
+    }
   }
 
   const renderStars = (rating) => {
@@ -34,19 +39,43 @@ const ProductCard = ({ product, onPress, style }) => {
     return stars
   }
 
+  const calculateDiscount = () => {
+    if (productListing.mrp && productListing.price) {
+      const discount = ((productListing.mrp - productListing.price) / productListing.mrp) * 100
+      return Math.round(discount)
+    }
+    return 0
+  }
+
+  const discount = calculateDiscount()
+  const inStock = productListing.stock > 0
+  const cartQuantity = getCartItemQuantity(productListing.id)
+
   return (
     <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.8}>
       {/* Discount Badge */}
-      {product.discount && (
+      {discount > 0 && (
         <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>{product.discount}</Text>
+          <Text style={styles.discountText}>{discount}% OFF</Text>
+        </View>
+      )}
+
+      {/* Service Badge */}
+      {productListing.is_service && (
+        <View style={styles.serviceBadge}>
+          <Text style={styles.serviceBadgeText}>SERVICE</Text>
         </View>
       )}
 
       {/* Product Image */}
       <View style={styles.imageContainer}>
-        <Image source={{ uri: product.image }} style={styles.image} />
-        {!product.inStock && (
+        <Image
+          source={{
+            uri: productListing.main_image || productListing.thumbnail || "/placeholder.svg?height=200&width=200",
+          }}
+          style={styles.image}
+        />
+        {!inStock && (
           <View style={styles.outOfStockOverlay}>
             <Text style={styles.outOfStockText}>Out of Stock</Text>
           </View>
@@ -55,33 +84,56 @@ const ProductCard = ({ product, onPress, style }) => {
 
       {/* Product Info */}
       <View style={styles.infoContainer}>
+        {/* Brand */}
+        {productListing.brand && (
+          <Text style={styles.brandName} numberOfLines={1}>
+            {productListing.brand.name}
+          </Text>
+        )}
+
+        {/* Product Name */}
         <Text style={styles.productName} numberOfLines={2}>
-          {product.name}
+          {productListing.name}
         </Text>
 
+        {/* Variant Name */}
+        {productListing.variant_name && (
+          <Text style={styles.variantName} numberOfLines={1}>
+            {productListing.variant_name}
+          </Text>
+        )}
+
         {/* Rating */}
-        {product.rating && (
+        {productListing.rating > 0 && (
           <View style={styles.ratingContainer}>
-            <View style={styles.stars}>{renderStars(product.rating)}</View>
-            <Text style={styles.ratingText}>({product.rating})</Text>
+            <View style={styles.stars}>{renderStars(productListing.rating)}</View>
+            <Text style={styles.ratingText}>({productListing.rating})</Text>
+            {productListing.review_count > 0 && (
+              <Text style={styles.reviewCount}>{productListing.review_count} reviews</Text>
+            )}
           </View>
         )}
 
         {/* Price */}
         <View style={styles.priceContainer}>
-          <Text style={styles.price}>₹{product.price}</Text>
-          {product.originalPrice && <Text style={styles.originalPrice}>₹{product.originalPrice}</Text>}
+          <Text style={styles.price}>₹{productListing.price}</Text>
+          {productListing.mrp && productListing.mrp > productListing.price && (
+            <Text style={styles.originalPrice}>₹{productListing.mrp}</Text>
+          )}
         </View>
+
+        {/* Stock Info */}
+        <Text style={styles.stockInfo}>{inStock ? `${productListing.stock} in stock` : "Out of stock"}</Text>
 
         {/* Add to Cart Button */}
         <TouchableOpacity
-          style={[styles.addToCartButton, !product.inStock && styles.disabledButton]}
+          style={[styles.addToCartButton, !inStock && styles.disabledButton]}
           onPress={handleAddToCart}
-          disabled={!product.inStock}
+          disabled={!inStock}
         >
-          <Ionicons name="bag-add-outline" size={16} color={product.inStock ? colors.background : colors.text.light} />
-          <Text style={[styles.addToCartText, !product.inStock && styles.disabledText]}>
-            {product.inStock ? "Add to Cart" : "Out of Stock"}
+          <Ionicons name="bag-add-outline" size={16} color={inStock ? colors.background : colors.text.light} />
+          <Text style={[styles.addToCartText, !inStock && styles.disabledText]}>
+            {!inStock ? "Out of Stock" : cartQuantity > 0 ? `In Cart (${cartQuantity})` : "Add to Cart"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -91,10 +143,8 @@ const ProductCard = ({ product, onPress, style }) => {
 
 const styles = StyleSheet.create({
   container: {
-    // width: cardWidth, // Remove this line
-    width: undefined, // Let parent control width
     backgroundColor: colors.background,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: spacing.md,
     shadowColor: "#000",
     shadowOffset: {
@@ -105,6 +155,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
   },
   discountBadge: {
     position: "absolute",
@@ -117,6 +170,21 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   discountText: {
+    color: colors.background,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
+  serviceBadge: {
+    position: "absolute",
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 1,
+  },
+  serviceBadgeText: {
     color: colors.background,
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
@@ -149,12 +217,24 @@ const styles = StyleSheet.create({
   infoContainer: {
     padding: spacing.sm,
   },
+  brandName: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    marginBottom: 2,
+    textTransform: "uppercase",
+  },
   productName: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     color: colors.text.primary,
     marginBottom: spacing.xs,
     lineHeight: 18,
+  },
+  variantName: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+    fontStyle: "italic",
   },
   ratingContainer: {
     flexDirection: "row",
@@ -168,11 +248,16 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: typography.sizes.xs,
     color: colors.text.secondary,
+    marginRight: spacing.xs,
+  },
+  reviewCount: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.light,
   },
   priceContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   price: {
     fontSize: typography.sizes.lg,
@@ -184,6 +269,11 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.text.light,
     textDecorationLine: "line-through",
+  },
+  stockInfo: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   addToCartButton: {
     flexDirection: "row",
