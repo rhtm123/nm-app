@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, StyleSheet } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import useAuthStore from '../stores/authStore';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, spacing, typography } from '../theme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import apiClient from '../config/apiClient';
 import { API_ENDPOINTS } from '../config/endpoints';
 
-const AddressesScreen = ({ navigation }) => {
-  const { user } = useAuth();
+const AddressesScreen = () => {
+  const { user } = useAuthStore();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);

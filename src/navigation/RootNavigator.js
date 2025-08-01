@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import AuthStack from './AuthStack';
 import AppDrawer from './AppDrawer';
+import useAuthStore from '../stores/authStore';
+import { colors } from '../theme';
 
 const RootNavigator = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Temporary login state
+  const { isAuthenticated, isLoading } = useAuthStore();
 
-  return isLoggedIn ? <AppDrawer /> : <AuthStack onLogin={() => setIsLoggedIn(true)} />;
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return isAuthenticated ? <AppDrawer /> : <AuthStack onLogin={() => {}} />;
 };
 
 export default RootNavigator;

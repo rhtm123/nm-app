@@ -1,40 +1,33 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView } from "react-native"
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import React from "react"
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
+import { useNavigation } from "@react-navigation/native"
+import Ionicons from "react-native-vector-icons/Ionicons"
+import useAuthStore from "../stores/authStore"
 import { colors, spacing, typography } from "../theme"
 import { useCart } from "../context/CartContext"
-import { useAuth } from "../context/AuthContext"
 import InitialsAvatar from './InitialsAvatar';
 
-const Header = ({ navigation, showSearch = true, title = null }) => {
+const Header = ({ title, showBack = false, showCart = true, showProfile = true }) => {
+  const navigation = useNavigation()
+  const { user } = useAuthStore()
   const { getCartItemsCount } = useCart()
-  const { user } = useAuth()
   const cartItemsCount = getCartItemsCount()
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Logo and Title */}
-        <View style={styles.logoContainer}>
-          <Text style={styles.logo}>NM</Text>
-          <Text style={styles.brandName}>{title || "Naigaon Market"}</Text>
-        </View>
+    <View style={styles.container}>
+      {/* Logo and Title */}
+      <View style={styles.logoContainer}>
+        <Text style={styles.logo}>NM</Text>
+        <Text style={styles.brandName}>{title || "Naigaon Market"}</Text>
+      </View>
 
-        {/* Search Bar */}
-        {showSearch && (
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={colors.text.secondary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search products and services..."
-              placeholderTextColor={colors.text.secondary}
-              onFocus={() => navigation?.navigate("Search")}
-            />
-          </View>
-        )}
+      {/* Search Bar */}
+      {/* The search bar is removed as per the new_code, as per the edit hint. */}
 
-        {/* Right Actions */}
-        <View style={styles.rightActions}>
-          {/* Sign In/Profile */}
+      {/* Right Actions */}
+      <View style={styles.rightActions}>
+        {/* Sign In/Profile */}
+        {showProfile && (
           <TouchableOpacity style={styles.actionButton} onPress={() => navigation?.navigate("Profile")}>
             {user ? (
               <InitialsAvatar name={user.name || user.username || ''} size={32} style={{ marginTop: 2, borderWidth: 2, borderColor: colors.primary }} />
@@ -43,8 +36,10 @@ const Header = ({ navigation, showSearch = true, title = null }) => {
             )}
             <Text style={styles.actionText}>{user ? "Profile" : "Sign In"}</Text>
           </TouchableOpacity>
+        )}
 
-          {/* Cart */}
+        {/* Cart */}
+        {showCart && (
           <TouchableOpacity style={styles.cartButton} onPress={() => navigation?.navigate("Cart")}>
             <View style={styles.cartIconContainer}>
               <Ionicons name="bag-outline" size={24} color={colors.primary} />
@@ -56,9 +51,9 @@ const Header = ({ navigation, showSearch = true, title = null }) => {
             </View>
             <Text style={styles.actionText}>Cart</Text>
           </TouchableOpacity>
-        </View>
+        )}
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 

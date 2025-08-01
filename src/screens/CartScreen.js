@@ -1,15 +1,16 @@
+import React, { useState, useEffect } from "react"
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from "react-native"
-import { useState } from "react"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
 import { useCart } from "../context/CartContext"
-import { useAuth } from "../context/AuthContext"
+import useAuthStore from "../stores/authStore"
 import { colors, spacing, typography } from "../theme"
+import LoadingSpinner from "../components/LoadingSpinner"
 
 const CartScreen = () => {
   const navigation = useNavigation()
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const {
     cartItems,
     loading,

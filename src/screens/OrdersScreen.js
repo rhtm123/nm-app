@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
+import useAuthStore from '../stores/authStore';
 import apiClient from '../config/apiClient';
 import { API_ENDPOINTS } from '../config/endpoints';
 import { colors, spacing, typography } from '../theme';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const OrdersScreen = () => {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 

@@ -1,19 +1,18 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native"
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import Header from "../components/Header"
-import LoadingSpinner from "../components/LoadingSpinner"
 import { useCart } from "../context/CartContext"
-import { useAuth } from "../context/AuthContext"
+import useAuthStore from "../stores/authStore"
 import { colors, spacing, typography } from "../theme"
+import LoadingSpinner from "../components/LoadingSpinner"
 import apiClient from '../config/apiClient';
 import { API_ENDPOINTS } from '../config/endpoints';
-import { useEffect } from 'react';
 
 const CheckoutScreen = () => {
   const navigation = useNavigation()
-  const { user } = useAuth()
+  const { cartItems, cartTotal, clearCart } = useCart()
+  const { user } = useAuthStore()
   // Redirect to login if not logged in
   if (!user) {
     useEffect(() => {
@@ -21,7 +20,6 @@ const CheckoutScreen = () => {
     }, []);
     return null;
   }
-  const { cartItems, getCartTotal, getCartSavings, clearCart } = useCart()
   const [loading, setLoading] = useState(false)
   const [addresses, setAddresses] = useState([])
   const [selectedAddress, setSelectedAddress] = useState(null)
@@ -46,10 +44,10 @@ const CheckoutScreen = () => {
     }
   };
 
-  const subtotal = getCartTotal() + getCartSavings()
+  const subtotal = cartTotal + getCartSavings()
   const savings = getCartSavings()
   const deliveryFee = 50
-  const total = getCartTotal() + deliveryFee
+  const total = cartTotal + deliveryFee
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {

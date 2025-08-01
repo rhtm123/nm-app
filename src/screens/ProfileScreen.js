@@ -4,14 +4,14 @@ import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
 import LoadingSpinner from "../components/LoadingSpinner"
-import { useAuth } from "../context/AuthContext"
+import useAuthStore from "../stores/authStore"
 import { useCart } from "../context/CartContext"
 import { colors, spacing, typography } from "../theme"
 import InitialsAvatar from '../components/InitialsAvatar';
 
 const ProfileScreen = () => {
   const navigation = useNavigation()
-  const { user, isAuthenticated, isLoading, sendOTP, verifyOTP, logout, updateProfile } = useAuth()
+  const { user, isAuthenticated, isLoading, sendOTP, verifyOTP, logout, updateProfile } = useAuthStore()
   const { clearCart } = useCart()
 
   const [showLoginForm, setShowLoginForm] = useState(false)

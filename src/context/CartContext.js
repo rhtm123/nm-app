@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useReducer, useEffect } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { useAuth } from "./AuthContext"
+import useAuthStore from "../stores/authStore"
 
 const CartContext = createContext()
 
@@ -94,7 +94,7 @@ export const CartProvider = ({ children }) => {
     error: null,
   })
 
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuthStore()
 
   // Load cart from storage when app starts or user changes
   useEffect(() => {

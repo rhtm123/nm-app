@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import useAuthStore from '../stores/authStore';
 // import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 // const GOOGLE_WEB_CLIENT_ID = process.env.PUBLIC_GOOGLE_WEB_CLIENT_ID; // TODO: Replace with your actual web client ID
 
 const LoginScreen = ({ onLogin }) => {
-  const { loginWithPassword, register, loginWithGoogle, isLoading } = useAuth();
+  const { loginWithPassword, register, loginWithGoogle, isLoading } = useAuthStore();
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
