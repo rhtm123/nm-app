@@ -68,6 +68,13 @@ const LoginScreen = ({ onLogin }) => {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+
+      <View className="flex-1 items-center justify-center bg-white">
+      <Text className="text-4xl font-bold mb-4 ">
+        Welcome to Nativewind!
+      </Text>
+    </View>
+
       <Text style={{ fontSize: 28, fontWeight: 'bold', marginBottom: 24 }}>
         {isRegister ? 'Register' : 'Login'}
       </Text>

@@ -93,7 +93,10 @@ export const authService = {
   // Username/Password Login
   loginWithPassword: async (username, password) => {
     try {
+      console.log(username, password);
       const response = await apiClient.post(API_ENDPOINTS.LOGIN, { username, password });
+
+      console.log(response);
       let userObj = response.data.user;
       if (!userObj) {
         // If user object is not present, fetch user profile using user_id

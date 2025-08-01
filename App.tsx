@@ -5,6 +5,8 @@
  * @format
  */
 
+
+
 import React from 'react';
 import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
@@ -14,6 +16,9 @@ import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { CartProvider } from './src/context/CartContext';
 import { AuthProvider } from './src/context/AuthContext';
+
+import "./global.css"; // Ensure this is imported to apply global styles
+
 
 export default function App() {
     const [darkMode, setDarkMode] = useState(false); // toggle this with a button or switch
