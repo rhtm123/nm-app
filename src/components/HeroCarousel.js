@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions } from "react-native"
+import { View, Text, FlatList, TouchableOpacity, Image, Dimensions } from "react-native"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import { colors, spacing, typography } from "../theme"
 
 const { width } = Dimensions.get("window")
 
@@ -12,78 +11,104 @@ const HeroCarousel = ({ products, onProductPress }) => {
   const flatListRef = useRef(null)
 
   const renderHeroItem = ({ item }) => (
-    <View style={styles.heroCard}>
+    <View className="w-[calc(100vw-32px)] bg-white rounded-2xl mx-4 p-4 relative shadow-lg shadow-gray-300/50">
       {/* Deal Badge */}
       {item.dealBadge && (
-        <View style={styles.dealBadge}>
-          <Text style={styles.dealBadgeText}>{item.dealBadge}</Text>
+        <View className="absolute top-2 left-2 bg-green-500 px-3 py-1 rounded-md z-10">
+          <Text className="text-white text-xs font-bold">{item.dealBadge}</Text>
         </View>
       )}
 
       {/* Discount Badge */}
       {item.discount && (
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>{item.discount}</Text>
+        <View className="absolute top-2 right-2 bg-red-500 px-3 py-1 rounded-md z-10">
+          <Text className="text-white text-xs font-bold">{item.discount}</Text>
         </View>
       )}
 
       {/* Product Image */}
-      <View style={styles.heroImageContainer}>
-        <Image source={{ uri: item.image }} style={styles.heroImage} />
+      <View className="items-center my-6">
+        <Image 
+          source={{ uri: item.image }} 
+          className="w-48 h-48"
+          resizeMode="contain"
+        />
       </View>
 
       {/* Product Info */}
-      <View style={styles.heroInfo}>
-        <Text style={styles.heroProductName}>{item.name}</Text>
+      <View className="items-center">
+        <Text className="text-xl font-bold text-gray-800 text-center mb-3 leading-6">
+          {item.name}
+        </Text>
 
         {/* Rating */}
-        <View style={styles.heroRating}>
-          <View style={styles.stars}>
+        <View className="flex-row items-center mb-3">
+          <View className="flex-row mr-1">
             {[1, 2, 3, 4, 5].map((star) => (
               <Ionicons
                 key={star}
                 name={star <= item.rating ? "star" : "star-outline"}
                 size={16}
-                color={colors.warning}
+                color="#f59e0b"
               />
             ))}
           </View>
-          <Text style={styles.ratingText}>({item.rating})</Text>
-          {item.reviews && <Text style={styles.reviewsText}>{item.reviews} reviews</Text>}
+          <Text className="text-sm text-gray-500 mr-1">({item.rating})</Text>
+          {item.reviews && <Text className="text-sm text-gray-400">{item.reviews} reviews</Text>}
         </View>
 
         {/* Price */}
-        <View style={styles.heroPriceContainer}>
-          <Text style={styles.heroPrice}>₹{item.price}</Text>
-          {item.originalPrice && <Text style={styles.heroOriginalPrice}>₹{item.originalPrice}</Text>}
+        <View className="flex-row items-center mb-3">
+          <Text className="text-3xl font-bold text-gray-800 mr-3">₹{item.price}</Text>
+          {item.originalPrice && (
+            <Text className="text-lg text-gray-400 line-through">₹{item.originalPrice}</Text>
+          )}
         </View>
 
         {/* Stock Status */}
-        <Text style={styles.stockStatus}>{item.inStock ? "✓ In Stock" : "✗ Out of Stock"}</Text>
+        <Text className={`text-sm mb-4 ${item.inStock ? 'text-green-600' : 'text-red-600'}`}>
+          {item.inStock ? "✓ In Stock" : "✗ Out of Stock"}
+        </Text>
 
         {/* Get This Deal Button */}
         <TouchableOpacity
-          style={[styles.dealButton, !item.inStock && styles.disabledButton]}
+          className={`flex-row items-center px-6 py-3 rounded-xl ${
+            item.inStock ? 'bg-blue-600' : 'bg-gray-300'
+          }`}
           onPress={() => onProductPress(item)}
           disabled={!item.inStock}
+          activeOpacity={0.8}
         >
-          <Ionicons name="bag-add" size={20} color={colors.background} />
-          <Text style={styles.dealButtonText}>Get This Deal</Text>
+          <Ionicons 
+            name="bag-add" 
+            size={20} 
+            color={item.inStock ? "#ffffff" : "#9ca3af"} 
+          />
+          <Text className={`font-semibold ml-1 ${
+            item.inStock ? 'text-white' : 'text-gray-500'
+          }`}>
+            Get This Deal
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   )
 
   const renderDots = () => (
-    <View style={styles.dotsContainer}>
+    <View className="flex-row justify-center items-center py-4">
       {products.map((_, index) => (
         <TouchableOpacity
           key={index}
-          style={[styles.dot, index === currentIndex && styles.activeDot]}
+          className={`h-2 rounded-full mx-1 ${
+            index === currentIndex 
+              ? 'bg-blue-600 w-6' 
+              : 'bg-gray-300 w-2'
+          }`}
           onPress={() => {
             setCurrentIndex(index)
             flatListRef.current?.scrollToIndex({ index, animated: true })
           }}
+          activeOpacity={0.7}
         />
       ))}
     </View>
@@ -96,7 +121,7 @@ const HeroCarousel = ({ products, onProductPress }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <View className="bg-gray-50">
       <FlatList
         ref={flatListRef}
         data={products}
@@ -112,146 +137,5 @@ const HeroCarousel = ({ products, onProductPress }) => {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-  },
-  heroCard: {
-    width: width - spacing.md * 2,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    margin: spacing.md,
-    padding: spacing.md,
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  dealBadge: {
-    position: "absolute",
-    top: spacing.sm,
-    left: spacing.sm,
-    backgroundColor: colors.success,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 4,
-    zIndex: 1,
-  },
-  dealBadgeText: {
-    color: colors.background,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-  },
-  discountBadge: {
-    position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: colors.deal,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 4,
-    zIndex: 1,
-  },
-  discountText: {
-    color: colors.background,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-  },
-  heroImageContainer: {
-    alignItems: "center",
-    marginVertical: spacing.lg,
-  },
-  heroImage: {
-    width: 200,
-    height: 200,
-    resizeMode: "contain",
-  },
-  heroInfo: {
-    alignItems: "center",
-  },
-  heroProductName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
-  heroRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  stars: {
-    flexDirection: "row",
-    marginRight: spacing.xs,
-  },
-  ratingText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-    marginRight: spacing.xs,
-  },
-  reviewsText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.light,
-  },
-  heroPriceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  heroPrice: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginRight: spacing.sm,
-  },
-  heroOriginalPrice: {
-    fontSize: typography.sizes.lg,
-    color: colors.text.light,
-    textDecorationLine: "line-through",
-  },
-  stockStatus: {
-    fontSize: typography.sizes.sm,
-    color: colors.success,
-    marginBottom: spacing.md,
-  },
-  dealButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
-  },
-  disabledButton: {
-    backgroundColor: colors.border,
-  },
-  dealButtonText: {
-    color: colors.background,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    marginLeft: spacing.xs,
-  },
-  dotsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.border,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: colors.primary,
-    width: 24,
-  },
-})
 
 export default HeroCarousel

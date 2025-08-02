@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../stores/authStore';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { colors, spacing, typography } from '../theme';
 import LoadingSpinner from '../components/LoadingSpinner';
 import apiClient from '../config/apiClient';
 import { API_ENDPOINTS } from '../config/endpoints';
@@ -82,57 +81,139 @@ const AddressesScreen = () => {
   };
 
   const renderAddress = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.name}>{item.name} ({item.mobile})</Text>
-      <Text style={styles.address}>{item.address?.line1}, {item.address?.line2}, {item.address?.city}, {item.address?.state} - {item.address?.pin}</Text>
-      <View style={{ flexDirection: 'row', marginTop: 8 }}>
-        <TouchableOpacity onPress={() => handleEdit(item)} style={styles.editBtn}><Text style={{ color: colors.primary }}>Edit</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}><Text style={{ color: colors.error }}>Delete</Text></TouchableOpacity>
+    <View className="bg-white rounded-2xl p-4 mb-4 shadow-lg shadow-gray-300/50 border border-gray-100">
+      <Text className="font-bold text-gray-800 text-base mb-1">{item.name} ({item.mobile})</Text>
+      <Text className="text-gray-600 mb-3">
+        {item.address?.line1}, {item.address?.line2}, {item.address?.city}, {item.address?.state} - {item.address?.pin}
+      </Text>
+      <View className="flex-row">
+        <TouchableOpacity 
+          onPress={() => handleEdit(item)} 
+          className="mr-4"
+          activeOpacity={0.7}
+        >
+          <Text className="text-blue-600 font-medium">Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => handleDelete(item.id)}
+          activeOpacity={0.7}
+        >
+          <Text className="text-red-600 font-medium">Delete</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={styles.header}><Text style={styles.headerText}>Saved Addresses</Text></View>
-      {loading && <ActivityIndicator style={{ margin: 16 }} />}
+    <View className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="bg-blue-600 p-4">
+        <Text className="text-white text-xl font-bold">Saved Addresses</Text>
+      </View>
+
+      {/* Loading Indicator */}
+      {loading && (
+        <View className="p-4">
+          <ActivityIndicator size="large" color="#3b82f6" />
+        </View>
+      )}
+
+      {/* Addresses List */}
       <FlatList
         data={addresses}
         keyExtractor={item => item.id.toString()}
         renderItem={renderAddress}
         contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={!loading && <Text style={{ textAlign: 'center', color: colors.text.secondary }}>No addresses found.</Text>}
+        ListEmptyComponent={
+          !loading && (
+            <View className="items-center justify-center p-8">
+              <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-4">
+                <Ionicons name="location-outline" size={32} color="#9ca3af" />
+              </View>
+              <Text className="text-gray-600 text-center">No addresses found.</Text>
+            </View>
+          )
+        }
+        showsVerticalScrollIndicator={false}
       />
-      <View style={styles.form}>
-        <Text style={styles.formTitle}>{editing ? 'Edit Address' : 'Add New Address'}</Text>
-        <TextInput placeholder="Name" value={form.name} onChangeText={v => setForm(f => ({ ...f, name: v }))} style={styles.input} />
-        <TextInput placeholder="Mobile" value={form.mobile} onChangeText={v => setForm(f => ({ ...f, mobile: v }))} style={styles.input} keyboardType="phone-pad" />
-        <TextInput placeholder="Line 1" value={form.line1} onChangeText={v => setForm(f => ({ ...f, line1: v }))} style={styles.input} />
-        <TextInput placeholder="Line 2" value={form.line2} onChangeText={v => setForm(f => ({ ...f, line2: v }))} style={styles.input} />
-        <TextInput placeholder="City" value={form.city} onChangeText={v => setForm(f => ({ ...f, city: v }))} style={styles.input} />
-        <TextInput placeholder="State" value={form.state} onChangeText={v => setForm(f => ({ ...f, state: v }))} style={styles.input} />
-        <TextInput placeholder="PIN" value={form.pin} onChangeText={v => setForm(f => ({ ...f, pin: v }))} style={styles.input} keyboardType="number-pad" />
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
-          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{editing ? 'Update' : 'Add'} Address</Text>
+
+      {/* Add/Edit Form */}
+      <View className="bg-white p-4 border-t border-gray-200">
+        <Text className="font-bold text-gray-800 text-lg mb-4">
+          {editing ? 'Edit Address' : 'Add New Address'}
+        </Text>
+        
+        <TextInput 
+          placeholder="Name" 
+          value={form.name} 
+          onChangeText={v => setForm(f => ({ ...f, name: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-gray-800 bg-white"
+        />
+        <TextInput 
+          placeholder="Mobile" 
+          value={form.mobile} 
+          onChangeText={v => setForm(f => ({ ...f, mobile: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-gray-800 bg-white"
+          keyboardType="phone-pad" 
+        />
+        <TextInput 
+          placeholder="Line 1" 
+          value={form.line1} 
+          onChangeText={v => setForm(f => ({ ...f, line1: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-gray-800 bg-white"
+        />
+        <TextInput 
+          placeholder="Line 2" 
+          value={form.line2} 
+          onChangeText={v => setForm(f => ({ ...f, line2: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-gray-800 bg-white"
+        />
+        <TextInput 
+          placeholder="City" 
+          value={form.city} 
+          onChangeText={v => setForm(f => ({ ...f, city: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-gray-800 bg-white"
+        />
+        <TextInput 
+          placeholder="State" 
+          value={form.state} 
+          onChangeText={v => setForm(f => ({ ...f, state: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-gray-800 bg-white"
+        />
+        <TextInput 
+          placeholder="PIN" 
+          value={form.pin} 
+          onChangeText={v => setForm(f => ({ ...f, pin: v }))} 
+          className="border border-gray-300 rounded-xl px-4 py-3 mb-4 text-gray-800 bg-white"
+          keyboardType="number-pad" 
+        />
+        
+        <TouchableOpacity 
+          className={`py-4 rounded-xl items-center ${loading ? 'bg-gray-400' : 'bg-blue-600'}`}
+          onPress={handleSave} 
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <Text className="text-white font-bold text-base">
+            {editing ? 'Update' : 'Add'} Address
+          </Text>
         </TouchableOpacity>
-        {editing && <TouchableOpacity onPress={() => { setEditing(null); setForm({ name: '', mobile: '', line1: '', line2: '', city: '', state: '', pin: '' }); }}><Text style={{ color: colors.error, textAlign: 'center', marginTop: 8 }}>Cancel Edit</Text></TouchableOpacity>}
+        
+        {editing && (
+          <TouchableOpacity 
+            onPress={() => { 
+              setEditing(null); 
+              setForm({ name: '', mobile: '', line1: '', line2: '', city: '', state: '', pin: '' }); 
+            }}
+            className="items-center mt-3"
+            activeOpacity={0.7}
+          >
+            <Text className="text-red-600 font-medium">Cancel Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  header: { padding: 16, backgroundColor: colors.primary },
-  headerText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  card: { backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 12, elevation: 2 },
-  name: { fontWeight: 'bold', fontSize: 16, marginBottom: 2 },
-  address: { color: colors.text.secondary },
-  editBtn: { marginRight: 16 },
-  deleteBtn: {},
-  form: { backgroundColor: '#fff', padding: 16, borderTopWidth: 1, borderColor: colors.border },
-  formTitle: { fontWeight: 'bold', fontSize: 16, marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, marginBottom: 8 },
-  saveBtn: { backgroundColor: colors.primary, padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 4 },
-});
 
 export default AddressesScreen; 

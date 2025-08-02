@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { View, Text } from 'react-native';
 
 const getInitials = (name = '') => {
   if (!name) return '';
@@ -19,32 +18,27 @@ const getColor = (str) => {
   return `hsl(${hue}, 70%, 60%)`;
 };
 
-const InitialsAvatar = ({ name = '', size = 36, style }) => {
+const InitialsAvatar = ({ name = '', size = 36, className = '' }) => {
   const initials = getInitials(name);
   const backgroundColor = getColor(initials);
+  
   return (
     <View
-      style={[
-        styles.avatar,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor },
-        style,
-      ]}
+      className={`items-center justify-center rounded-full ${className}`}
+      style={{ 
+        width: size, 
+        height: size, 
+        backgroundColor 
+      }}
     >
-      <Text style={[styles.initials, { fontSize: size * 0.5 }]}>{initials}</Text>
+      <Text 
+        className="text-white font-bold"
+        style={{ fontSize: size * 0.4 }}
+      >
+        {initials}
+      </Text>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-  },
-  initials: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-});
 
 export default InitialsAvatar; 

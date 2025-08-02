@@ -1,21 +1,11 @@
-import { View, ActivityIndicator, StyleSheet } from "react-native"
-import { colors, spacing } from "../theme"
+import { View, ActivityIndicator } from "react-native"
 
-const LoadingSpinner = ({ size = "large", color = colors.primary }) => {
+const LoadingSpinner = ({ size = "large", color = "#3b82f6" }) => {
   return (
-    <View style={styles.container}>
+    <View className="flex-1 justify-center items-center p-6">
       <ActivityIndicator size={size} color={color} />
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.lg,
-  },
-})
 
 export default LoadingSpinner

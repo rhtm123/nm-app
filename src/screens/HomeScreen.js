@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions } from "react-native"
+import { View, Text, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions } from "react-native"
 import { useState } from "react"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
@@ -6,42 +6,222 @@ import ProductCard from "../components/ProductCard"
 import LoadingSpinner from "../components/LoadingSpinner"
 import ErrorMessage from "../components/ErrorMessage"
 import { useProductListings, useCategories, useFeaturedProducts } from "../hooks/useProducts"
-import { colors, spacing, typography } from "../theme"
 import Header from '../components/Header';
+import { useCart } from '../context/CartContext'; // Add this import at the top
+
 
 const { width } = Dimensions.get("window")
 
-// --- Product Card (Reusable) ---
-const ProductCardModern = ({ item, navigation }) => (
-  <TouchableOpacity onPress={() => navigation.navigate('ProductDetail', { productListing: item })} activeOpacity={0.8}>
-    <View style={stylesModern.productCard}>
+// Simple Product Card for Home Screen
+const HomeProductCard = ({ item, navigation }) => {
+  const { addToCart, getCartItemQuantity } = useCart();
+  const cartQuantity = getCartItemQuantity(item.id);
+
+  const calculateDiscount = () => {
+    if (item.mrp && item.price) {
+      const discount = ((item.mrp - item.price) / item.mrp) * 100;
+      return Math.round(discount);
+    }
+    return 0;
+  };
+
+  const discount = calculateDiscount();
+
+  return (
+    <View className="w-44 mr-5">
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('ProductDetail', { productListing: item })} 
+        className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
+      >
+        {/* Product Image Container */}
+        <View className="relative h-48 bg-gray-100">
+          {item.main_image || item.thumbnail ? (
       <Image
-        source={item.main_image ? { uri: item.main_image } : require('../../assets/placeholder.png')}
-        style={stylesModern.productImage}
+              source={{ uri: item.main_image || item.thumbnail }}
+              className="w-full h-full"
         resizeMode="cover"
       />
-      <Text style={stylesModern.productName} numberOfLines={2}>{item.name}</Text>
-      <Text style={stylesModern.productPrice}>{item.price ? `₹${item.price}` : 'Contact for price'}</Text>
-      <TouchableOpacity style={stylesModern.addButton}>
-        <Text style={stylesModern.addButtonText}>ADD</Text>
+          ) : (
+            <View className="w-full h-full bg-gray-200 items-center justify-center">
+              <Ionicons name="image-outline" size={48} color="#9ca3af" />
+            </View>
+          )}
+          
+          {/* Discount Badge */}
+          {discount > 0 && (
+            <View className="absolute top-2 left-2 bg-red-500 px-2 py-1 rounded-md">
+              <Text className="text-white text-xs font-bold">{discount}% OFF</Text>
+            </View>
+          )}
+
+          {/* Brand Badge */}
+          {item.brand && (
+            <View className="absolute top-2 right-2 bg-black px-2 py-1 rounded-md">
+              <Text className="text-white text-xs font-semibold">{item.brand.name}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Product Info */}
+        <View className="p-3">
+          {/* Product Name */}
+          <Text className="text-sm font-semibold text-gray-900 mb-1" numberOfLines={2}>
+            {item.name || "Product Name"}
+          </Text>
+
+          {/* Variant */}
+          {item.variant_name && (
+            <Text className="text-xs text-gray-500 mb-2">{item.variant_name}</Text>
+          )}
+
+          {/* Rating */}
+          {item.rating > 0 && (
+            <View className="flex-row items-center mb-2">
+              <View className="flex-row mr-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Ionicons
+                    key={star}
+                    name={star <= item.rating ? "star" : "star-outline"}
+                    size={12}
+                    color="#f59e0b"
+                  />
+                ))}
+              </View>
+              <Text className="text-xs text-gray-600">({item.rating})</Text>
+            </View>
+          )}
+
+          {/* Price */}
+          <View className="flex-row items-center mb-2">
+            <Text className="text-lg font-bold text-gray-900 mr-2">₹{item.price || 0}</Text>
+            {item.mrp && item.mrp > item.price && (
+              <Text className="text-sm text-gray-400 line-through">₹{item.mrp}</Text>
+            )}
+          </View>
+
+          {/* Stock Info */}
+          <Text className="text-xs text-gray-500 mb-3">
+            {item.stock > 0 ? `${item.stock} in stock` : "Out of stock"}
+          </Text>
+
+          {/* Add Button */}
+          <TouchableOpacity
+            className={`bg-blue-600 py-2 rounded-lg items-center ${item.stock <= 0 ? 'opacity-50' : ''}`}
+            disabled={item.stock <= 0}
+            onPress={() => addToCart(item)}
+          >
+            <Text className="text-white font-bold text-sm">
+              {cartQuantity > 0 ? `In Cart (${cartQuantity})` : 'ADD TO CART'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     </View>
-  </TouchableOpacity>
-)
+  );
+};
 
-// --- Category Card (Reusable) ---
-const CategoryCardModern = ({ item, navigation }) => (
-  <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: item })} activeOpacity={0.8}>
-    <View style={stylesModern.categoryCard}>
-      {item.image ? (
-        <Image source={{ uri: item.image }} style={stylesModern.categoryImage} resizeMode="cover" />
-      ) : (
-        <Ionicons name="cube" size={32} color={colors.primary} />
-      )}
-      <Text style={stylesModern.categoryName} numberOfLines={2}>{item.name}</Text>
-    </View>
+// Simple Category Card
+const HomeCategoryCard = ({ item, navigation }) => {
+  return (
+    <TouchableOpacity 
+      onPress={() => navigation.navigate('CategoryProducts', { category: item })} 
+      className="w-20 items-center mr-6"
+    >
+      <View className="w-16 h-16 bg-blue-100 rounded-2xl items-center justify-center mb-2 border border-blue-200">
+        {item.image ? (
+          <Image 
+            source={{ uri: item.image }} 
+            className="w-10 h-10 rounded-lg"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="w-10 h-10 bg-blue-500 rounded-lg items-center justify-center">
+            <Ionicons name="cube" size={20} color="white" />
+          </View>
+        )}
+      </View>
+      <Text className="text-xs font-semibold text-gray-800 text-center" numberOfLines={2}>
+        {item.name}
+      </Text>
   </TouchableOpacity>
-)
+  );
+};
+
+// Simple Hero Carousel
+const HeroCarousel = ({ featuredProducts, navigation }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const renderHeroItem = ({ item }) => (
+    <View style={{ width }} className="px-4">
+      <TouchableOpacity
+        onPress={() => navigation.navigate('ProductDetail', { productListing: item })}
+        className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden items-center"
+        activeOpacity={0.95}
+      >
+        {/* Product Image */}
+        <View className="w-full items-center pt-6 pb-2 bg-white">
+          {item.main_image || item.thumbnail ? (
+            <Image
+              source={{ uri: item.main_image || item.thumbnail }}
+              className="w-32 h-32"
+              resizeMode="contain"
+            />
+          ) : (
+            <View className="w-32 h-32 bg-gray-200 items-center justify-center">
+              <Ionicons name="image-outline" size={48} color="#9ca3af" />
+            </View>
+          )}
+        </View>
+        {/* Product Info */}
+        <View className="p-4 w-full items-center bg-blue-600 ">
+          <Text className="text-lg font-bold text-white mb-1 text-center">{item.name}</Text>
+          <Text className="text-xs text-gray-200 mb-2 text-center">{item.brand?.name}</Text>
+          <View className="flex-row items-center justify-center mb-2">
+            <Text className="text-xl font-bold text-green-300 mr-2">₹{item.price}</Text>
+            {item.mrp && item.mrp > item.price && (
+              <Text className="text-sm text-gray-400 line-through">₹{item.mrp}</Text>
+            )}
+          </View>
+          <TouchableOpacity className="bg-white px-6 py-2 rounded-full mt-2" activeOpacity={0.8}>
+            <Text className="text-blue-800 font-bold">Shop Now</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderDots = () => (
+    <View className="flex-row justify-center items-center mt-4">
+      {featuredProducts.map((_, index) => (
+        <View
+          key={index}
+          className={`h-2 rounded-full mx-1 ${
+            index === currentIndex ? 'bg-blue-600 w-6' : 'bg-gray-300 w-2'
+          }`}
+        />
+      ))}
+    </View>
+  );
+
+  return (
+    <View className="mb-6">
+      <FlatList
+        data={featuredProducts}
+        renderItem={renderHeroItem}
+        keyExtractor={(item) => item.id.toString()}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(event) => {
+          const index = Math.round(event.nativeEvent.contentOffset.x / width);
+          setCurrentIndex(index);
+        }}
+      />
+      {renderDots()}
+    </View>
+  );
+};
+
 
 const HomeScreen = () => {
   const navigation = useNavigation()
@@ -54,11 +234,13 @@ const HomeScreen = () => {
     error: productsError,
     refetch: refetchProducts,
   } = useProductListings({ page_size: 20 })
+  
   const {
     data: categoriesData,
     loading: categoriesLoading,
     refetch: refetchCategories,
   } = useCategories({ page_size: 10 })
+  
   const { featuredProducts, loading: featuredLoading, error: featuredError } = useFeaturedProducts()
 
   const products = productsData?.results || []
@@ -70,844 +252,241 @@ const HomeScreen = () => {
     setRefreshing(false)
   }
 
-  // --- Update renderMainCategories ---
-  const renderMainCategories = () => (
-    <View style={stylesModern.section}>
-      <FlatList
-        data={categories.slice(0, 5)}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <CategoryCardModern item={item} navigation={navigation} />}
-        contentContainerStyle={stylesModern.horizontalList}
-        ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
-      />
+  // Promotional Banners Data
+  const promotionalBanners = [
+    {
+      id: 1,
+      title: "Hariyali Teej",
+      subtitle: "Celebrate with us",
+      color: "bg-green-500",
+      icon: "flower"
+    },
+    {
+      id: 2,
+      title: "MEGA SALE",
+      subtitle: "Up to 50% off",
+      color: "bg-red-500",
+      icon: "flash"
+    }
+  ];
+
+  const quickCategories = [
+    { name: "Deals", icon: "pricetag", color: "bg-red-500" },
+    { name: "Flash", icon: "flash", color: "bg-yellow-500" },
+    { name: "Moments", icon: "heart", color: "bg-pink-500" },
+    { name: "Beauty", icon: "sparkles", color: "bg-purple-500" },
+    { name: "Moms", icon: "people", color: "bg-blue-500" },
+    { name: "Gifts", icon: "gift", color: "bg-green-500" }
+  ];
+
+  if (productsLoading || categoriesLoading) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <Header title="Naigaon Market" navigation={navigation} />
+        <LoadingSpinner />
+      </View>
+    )
+  }
+
+  if (productsError || featuredError) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <Header title="Naigaon Market" navigation={navigation} />
+        <ErrorMessage message={productsError || featuredError} onRetry={onRefresh} />
     </View>
   )
+  }
 
-  const renderPromotionalBanner = () => (
-    <View style={styles.promotionalBanner}>
-      <View style={styles.bannerContent}>
-        <Text style={styles.bannerTitle}>Hariyali Teej</Text>
-        <Text style={styles.bannerSubtitle}>Celebrate with us</Text>
-        <TouchableOpacity style={styles.bannerButton}>
-          <Text style={styles.bannerButtonText}>Shop Now</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.bannerImage}>
-        <Ionicons name="flower" size={40} color={colors.background} />
-      </View>
-    </View>
-  )
-
-  const renderSubPromotions = () => (
-    <View style={styles.subPromotionsSection}>
+  return (
+    <View className="flex-1 bg-gray-50">
+      <Header title="Naigaon Market" navigation={navigation} />
+      
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Quick Categories */}
+        <View className="px-4 py-6">
       <FlatList
-        data={[
-          { title: "Shimmer & Mehndi", icon: "sparkles", color: "#FF6B6B" },
-          { title: "Gifts Corner", icon: "gift", color: "#4ECDC4" },
-          { title: "Teej Specials", icon: "heart", color: "#45B7D1" }
-        ]}
+            data={quickCategories}
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
-          <View style={[styles.subPromotionCard, { backgroundColor: item.color }]}>
-            <Ionicons name={item.icon} size={24} color={colors.background} />
-            <Text style={styles.subPromotionText}>{item.title}</Text>
+              <TouchableOpacity className="items-center mr-6">
+                <View className={`w-12 h-12 ${item.color} rounded-xl items-center justify-center mb-2`}>
+                  <Ionicons name={item.icon} size={20} color="white" />
+                </View>
+                <Text className="text-xs font-semibold text-gray-800">{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+
+        {/* Hero Carousel */}
+        {featuredProducts && featuredProducts.length > 0 && (
+          <View className="mb-6">
+            <Text className="text-xl font-bold text-gray-900 px-4 mb-4">Featured Products</Text>
+            <HeroCarousel featuredProducts={featuredProducts} navigation={navigation} />
           </View>
         )}
-        contentContainerStyle={styles.subPromotionsList}
+
+        {/* Promotional Banners */}
+        <View className="px-4 mb-6">
+          <FlatList
+            data={promotionalBanners}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                className={`w-72 h-32 rounded-2xl mr-4 p-4 justify-between ${item.color}`}
+              >
+                <View>
+                  <Text className="text-white text-xl font-bold mb-1">{item.title}</Text>
+                  <Text className="text-white text-base">{item.subtitle}</Text>
+                </View>
+                <View className="flex-row items-center justify-between">
+                  <TouchableOpacity className="bg-white px-4 py-2 rounded-full">
+                    <Text className="text-gray-800 font-bold">Shop Now</Text>
+                  </TouchableOpacity>
+                  <Ionicons name={item.icon} size={32} color="white" />
+                </View>
+              </TouchableOpacity>
+            )}
       />
     </View>
-  )
 
-  // --- Update renderPreviouslyBought ---
-  const renderPreviouslyBought = () => {
-    if (productsLoading) return <LoadingSpinner />
-    if (productsError) return <ErrorMessage message={productsError} onRetry={refetchProducts} />
-    if (!products || products.length === 0) return null
-
-    return (
-      <View style={stylesModern.section}>
-        <View style={stylesModern.sectionHeader}>
-          <Text style={stylesModern.sectionTitle}>Previously bought</Text>
+        {/* Main Categories */}
+        {categories && categories.length > 0 && (
+          <View className="mb-6">
+            <View className="flex-row items-center justify-between px-4 mb-4">
+              <Text className="text-xl font-bold text-gray-900">Categories</Text>
           <TouchableOpacity>
-            <Text style={stylesModern.viewAllText}>See all products</Text>
+                <Text className="text-blue-600 font-semibold">See All</Text>
           </TouchableOpacity>
         </View>
         <FlatList
-          data={products.slice(0, 5)}
+              data={categories.slice(0, 8)}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <ProductCardModern item={item} navigation={navigation} />}
-          contentContainerStyle={stylesModern.horizontalList}
-          ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+              renderItem={({ item }) => <HomeCategoryCard item={item} navigation={navigation} />}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
         />
       </View>
-    )
-  }
+        )}
 
-  const renderFeaturedWeek = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Featured this week</Text>
+        {/* Debug Section - Show Product Data */}
+        {/* <View className="px-4 mb-6">
+          <Text className="text-lg font-bold text-gray-900 mb-4">Debug - Product Data</Text>
+          <View className="bg-white p-4 rounded-lg border border-gray-200">
+            <Text className="text-sm text-gray-700 mb-2">Products loaded: {products.length}</Text>
+            {products.slice(0, 2).map((product, index) => (
+              <View key={product.id} className="mb-3 p-3 bg-gray-50 rounded">
+                <Text className="text-sm font-semibold text-gray-900">{product.name}</Text>
+                <Text className="text-xs text-gray-600">Price: ₹{product.price}</Text>
+                <Text className="text-xs text-gray-600">Brand: {product.brand?.name}</Text>
+                <Text className="text-xs text-gray-600">Image: {product.main_image ? 'Yes' : 'No'}</Text>
+              </View>
+            ))}
+          </View>
+        </View> */}
+
+        {/* Previously Bought */}
+        {products && products.length > 0 && (
+          <View className="mb-6">
+            <View className="flex-row items-center justify-between px-4 mb-4">
+              <Text className="text-xl font-bold text-gray-900">Previously Bought</Text>
+              <TouchableOpacity>
+                <Text className="text-blue-600 font-semibold">See All</Text>
+              </TouchableOpacity>
+            </View>
       <FlatList
-        data={[
-          { title: "Family Essentials", color: "#FF9500", icon: "people" },
-          { title: "Saddhnu Sawan", color: "#007AFF", icon: "leaf" },
-          { title: "TRENDING NEAR YOU", color: "#5856D6", icon: "trending-up" }
-        ]}
+              data={products.slice(0, 6)}
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={[styles.featuredCard, { backgroundColor: item.color }]}>
-            <Ionicons name={item.icon} size={24} color={colors.background} />
-            <Text style={styles.featuredCardText}>{item.title}</Text>
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => <HomeProductCard item={item} navigation={navigation} />}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            />
           </View>
         )}
-        contentContainerStyle={styles.featuredList}
-      />
-    </View>
-  )
 
-  const renderMegaSale = () => (
-    <View style={styles.megaSaleSection}>
-      <View style={styles.megaSaleBanner}>
-        <Text style={styles.megaSaleTitle}>MEGA CLEANING SALE</Text>
-        <Text style={styles.megaSaleSubtitle}>Powered by top brands</Text>
-        <TouchableOpacity style={styles.megaSaleButton}>
-          <Text style={styles.megaSaleButtonText}>Shop Now</Text>
+        {/* Mega Sale Banner */}
+        <View className="mx-4 mb-6">
+          <View className="bg-blue-600 rounded-2xl p-6">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1">
+                <Text className="text-white text-2xl font-bold mb-2">MEGA CLEANING SALE</Text>
+                <Text className="text-white text-lg mb-4">Powered by top brands</Text>
+                <TouchableOpacity className="bg-white px-6 py-3 rounded-full self-start">
+                  <Text className="text-blue-600 font-bold">Shop Now</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.megaSaleSubCards}>
-        <View style={styles.megaSaleSubCard}>
-          <Text style={styles.megaSaleSubCardTitle}>Starting at ₹99</Text>
-        </View>
-        <View style={styles.megaSaleSubCard}>
-          <Text style={styles.megaSaleSubCardTitle}>Cleaning & Hygiene</Text>
-        </View>
-        <View style={styles.megaSaleSubCard}>
-          <Text style={styles.megaSaleSubCardTitle}>Laundry & Freshness</Text>
-        </View>
-      </View>
+              <View className="w-20 h-20 bg-white rounded-full items-center justify-center">
+                <Ionicons name="sparkles" size={32} color="#2563eb" />
     </View>
-  )
-
-  // --- Update renderCategoryGrid ---
-  const renderCategoryGrid = () => {
-    if (categoriesLoading) return <LoadingSpinner />
-    if (!categories || categories.length === 0) return null
-
-    const categoryGroups = [
-      { title: "Grocery & Kitchen", categories: categories.slice(0, 4) },
-      { title: "Snacks & Drinks", categories: categories.slice(4, 8) },
-      { title: "Beauty & Personal Care", categories: categories.slice(0, 4) },
-      { title: "Household Essentials", categories: categories.slice(4, 8) }
-    ]
-
-    return (
-      <View style={stylesModern.section}>
-        {categoryGroups.map((group, index) => (
-          <View key={index} style={stylesModern.categoryGroup}>
-            <Text style={stylesModern.categoryGroupTitle}>{group.title}</Text>
-            <View style={stylesModern.categoryGrid}>
-              {group.categories.map((category) => (
-                <CategoryCardModern key={category.id} item={category} navigation={navigation} />
-              ))}
             </View>
           </View>
-        ))}
-      </View>
-    )
-  }
-
-  const renderZomatoVoucher = () => (
-    <View style={styles.zomatoVoucherSection}>
-      <View style={styles.zomatoVoucherCard}>
-        <View style={styles.zomatoVoucherContent}>
-          <Text style={styles.zomatoVoucherTitle}>zomato voucher worth ₹100</Text>
-          <Text style={styles.zomatoVoucherSubtitle}>on Blinkit orders above ₹799</Text>
         </View>
-        <View style={styles.zomatoVoucherIcon}>
-          <Ionicons name="restaurant" size={32} color={colors.background} />
-        </View>
-      </View>
-    </View>
-  )
 
-  const renderShopByStore = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Shop by store</Text>
-      <View style={styles.storeGrid}>
-        {[
-          { name: "Spiritual Store", icon: "flower" },
-          { name: "Pharma Store", icon: "medical" },
-          { name: "Pet Store", icon: "paw" },
-          { name: "Sports Store", icon: "football" },
-          { name: "Toy Store", icon: "game-controller" }
-        ].map((store, index) => (
-          <TouchableOpacity key={index} style={styles.storeItem}>
-            <View style={styles.storeIcon}>
-              <Ionicons name={store.icon} size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.storeName}>{store.name}</Text>
+        {/* Category Grid */}
+        {categories && categories.length > 0 && (
+          <View className="mb-6">
+            <Text className="text-xl font-bold text-gray-900 px-4 mb-4">Shop by Category</Text>
+            <View className="px-4">
+              <View className="flex-row flex-wrap justify-between">
+                {categories.slice(0, 8).map((category, index) => (
+                  <TouchableOpacity 
+                    key={category.id}
+                    onPress={() => navigation.navigate('CategoryProducts', { category })}
+                    className="w-[48%] bg-white rounded-2xl p-4 mb-4 shadow-lg border border-gray-200"
+                  >
+                    <View className="w-12 h-12 bg-blue-100 rounded-xl items-center justify-center mb-3">
+                      {category.image ? (
+                        <Image 
+                          source={{ uri: category.image }} 
+                          className="w-8 h-8 rounded-lg"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center">
+                          <Ionicons name="cube" size={16} color="white" />
+        </View>
+                      )}
+      </View>
+                    <Text className="text-sm font-semibold text-gray-900" numberOfLines={2}>
+                      {category.name}
+                    </Text>
           </TouchableOpacity>
         ))}
       </View>
     </View>
-  )
+          </View>
+        )}
 
-  // --- Update renderProductSection ---
-  const renderProductSection = (title, products, showRating = true) => {
-    if (productsLoading) return <LoadingSpinner />
-    if (productsError) return <ErrorMessage message={productsError} onRetry={refetchProducts} />
-    if (!products || products.length === 0) return null
-
-    return (
-      <View style={stylesModern.section}>
-        <Text style={stylesModern.sectionTitle}>{title}</Text>
+        {/* More Products */}
+        {products && products.length > 0 && (
+          <View className="mb-6">
+            <Text className="text-xl font-bold text-gray-900 px-4 mb-4">Trending Now</Text>
         <FlatList
           data={products.slice(0, 6)}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <ProductCardModern item={item} navigation={navigation} />}
-          contentContainerStyle={stylesModern.horizontalList}
-          ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+              renderItem={({ item }) => <HomeProductCard item={item} navigation={navigation} />}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
         />
       </View>
-    )
-  }
+        )}
 
-  const renderBottomBanner = () => (
-    <View style={styles.bottomBanner}>
-      <View style={styles.bottomBannerContent}>
-        <Text style={styles.bottomBannerTitle}>Free Gift on Cleaning Essentials</Text>
-        <Text style={styles.bottomBannerSubtitle}>on orders above ₹499</Text>
-      </View>
-      <TouchableOpacity style={styles.closeButton}>
-        <Ionicons name="close" size={20} color={colors.text.primary} />
-      </TouchableOpacity>
-    </View>
-  )
-
-  return (
-    <View style={styles.container}>
-      <Header title="Naigaon Market" showSearch navigation={navigation} />
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Header is now handled by the navigation stack */}
-        {renderMainCategories()}
-        {renderPromotionalBanner()}
-        {renderSubPromotions()}
-        {renderPreviouslyBought()}
-        {renderFeaturedWeek()}
-        {renderMegaSale()}
-        {renderCategoryGrid()}
-        {renderZomatoVoucher()}
-        {renderShopByStore()}
-        {renderProductSection("Define your style", products, false)}
-        {renderProductSection("Price drop!", products)}
-        {renderProductSection("Start your day right", products, false)}
+        {/* Bottom Spacing */}
+        <View className="h-20" />
       </ScrollView>
-      {renderBottomBanner()}
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-
-  // Header
-  header: {
-    backgroundColor: colors.primary,
-    paddingTop: 40,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  deliveryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  deliveryText: {
-    color: colors.background,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    marginLeft: spacing.xs,
-  },
-  locationText: {
-    color: colors.background,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    marginBottom: spacing.md,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    marginLeft: spacing.sm,
-    color: colors.text.secondary,
-    fontSize: typography.sizes.sm,
-  },
-  userIcons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  userIcon: {
-    marginLeft: spacing.md,
-  },
-
-  // Main Categories
-  mainCategoriesSection: {
-    backgroundColor: colors.background,
-    paddingVertical: spacing.md,
-  },
-  mainCategoriesList: {
-    paddingHorizontal: spacing.md,
-  },
-  mainCategoryItem: {
-    alignItems: 'center',
-    marginRight: spacing.lg,
-  },
-  mainCategoryIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  mainCategoryImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  mainCategoryName: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.primary,
-    textAlign: 'center',
-    fontWeight: typography.weights.medium,
-  },
-
-  // Promotional Banner
-  promotionalBanner: {
-    backgroundColor: colors.success,
-    margin: spacing.md,
-    borderRadius: 12,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bannerContent: {
-    flex: 1,
-  },
-  bannerTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.background,
-    marginBottom: spacing.xs,
-  },
-  bannerSubtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.background,
-    marginBottom: spacing.md,
-  },
-  bannerButton: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  bannerButtonText: {
-    color: colors.success,
-    fontWeight: typography.weights.semibold,
-  },
-  bannerImage: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Sub Promotions
-  subPromotionsSection: {
-    marginBottom: spacing.md,
-  },
-  subPromotionsList: {
-    paddingHorizontal: spacing.md,
-  },
-  subPromotionCard: {
-    padding: spacing.md,
-    borderRadius: 8,
-    marginRight: spacing.md,
-    alignItems: 'center',
-    minWidth: 100,
-  },
-  subPromotionText: {
-    color: colors.background,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-  },
-
-  // Sections
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-  },
-  viewAllText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-  },
-
-  // Previously Bought
-  previouslyBoughtList: {
-    paddingHorizontal: spacing.md,
-  },
-  previouslyBoughtCard: {
-    width: 120,
-    marginRight: spacing.md,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    padding: spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  previouslyBoughtImage: {
-    width: '100%',
-    height: 80,
-    borderRadius: 6,
-    marginBottom: spacing.xs,
-  },
-  previouslyBoughtName: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  previouslyBoughtPrice: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-
-  // Featured Week
-  featuredList: {
-    paddingHorizontal: spacing.md,
-  },
-  featuredCard: {
-    padding: spacing.md,
-    borderRadius: 8,
-    marginRight: spacing.md,
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  featuredCardText: {
-    color: colors.background,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-  },
-
-  // Mega Sale
-  megaSaleSection: {
-    margin: spacing.md,
-  },
-  megaSaleBanner: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  megaSaleTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.background,
-    marginBottom: spacing.xs,
-  },
-  megaSaleSubtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.background,
-    marginBottom: spacing.md,
-  },
-  megaSaleButton: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  megaSaleButtonText: {
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
-  },
-  megaSaleSubCards: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  megaSaleSubCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 8,
-    marginHorizontal: spacing.xs,
-    alignItems: 'center',
-  },
-  megaSaleSubCardTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-
-  // Category Grid
-  categoryGridSection: {
-    marginBottom: spacing.lg,
-  },
-  categoryGroup: {
-    marginBottom: spacing.lg,
-  },
-  categoryGroupTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: spacing.md,
-  },
-  categoryGridItem: {
-    width: (width - spacing.md * 3) / 4,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  categoryGridIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  categoryGridImage: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  categoryGridName: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.primary,
-    textAlign: 'center',
-    fontWeight: typography.weights.medium,
-  },
-
-  // Zomato Voucher
-  zomatoVoucherSection: {
-    margin: spacing.md,
-  },
-  zomatoVoucherCard: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 12,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  zomatoVoucherContent: {
-    flex: 1,
-  },
-  zomatoVoucherTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.background,
-    marginBottom: spacing.xs,
-  },
-  zomatoVoucherSubtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.background,
-  },
-  zomatoVoucherIcon: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Store Grid
-  storeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: spacing.md,
-  },
-  storeItem: {
-    width: (width - spacing.md * 3) / 3,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  storeIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  storeName: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.primary,
-    textAlign: 'center',
-    fontWeight: typography.weights.medium,
-  },
-
-  // Product Cards
-  productList: {
-    paddingHorizontal: spacing.md,
-  },
-  productCard: {
-    width: 140,
-    marginRight: spacing.md,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    padding: spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  productImage: {
-    width: '100%',
-    height: 100,
-    borderRadius: 6,
-    marginBottom: spacing.xs,
-  },
-  productName: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  productPrice: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  productRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  ratingText: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.secondary,
-    marginLeft: spacing.xs,
-  },
-
-  // Add Button
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.xs,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: colors.background,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold,
-  },
-
-  // Bottom Banner
-  bottomBanner: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-  },
-  bottomBannerContent: {
-    flex: 1,
-  },
-  bottomBannerTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.background,
-  },
-  bottomBannerSubtitle: {
-    fontSize: typography.sizes.xs,
-    color: colors.background,
-  },
-  closeButton: {
-    padding: spacing.xs,
-  },
-})
-
-// --- Modern Styles ---
-const stylesModern = StyleSheet.create({
-  section: {
-    marginBottom: 28,
-    paddingTop: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  horizontalList: {
-    paddingHorizontal: 20,
-  },
-  // Product Card
-  productCard: {
-    width: 150,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-    alignItems: 'center',
-  },
-  productImage: {
-    width: 120,
-    height: 100,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#f2f2f2',
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  productPrice: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  // Category Card
-  categoryCard: {
-    width: 100,
-    height: 120,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-    marginRight: 12,
-  },
-  categoryImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginBottom: 8,
-    backgroundColor: '#f2f2f2',
-  },
-  categoryName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  // Category Grid
-  categoryGroup: {
-    marginBottom: 18,
-  },
-  categoryGroupTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 20,
-  },
-})
 
 export default HomeScreen

@@ -1,9 +1,8 @@
 import React from "react"
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
+import { View, Text, TouchableOpacity, Image } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import useAuthStore from "../stores/authStore"
-import { colors, spacing, typography } from "../theme"
 import { useCart } from "../context/CartContext"
 import InitialsAvatar from './InitialsAvatar';
 
@@ -14,134 +13,73 @@ const Header = ({ title, showBack = false, showCart = true, showProfile = true }
   const cartItemsCount = getCartItemsCount()
 
   return (
-    <View style={styles.container}>
+    <View className="flex-row items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shadow-lg mt-10">
       {/* Logo and Title */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logo}>NM</Text>
-        <Text style={styles.brandName}>{title || "Naigaon Market"}</Text>
+      <View className="flex-row items-center flex-1">
+        <Image 
+          source={require('../../assets/img/logo.png')}
+          className="w-12 h-12 mr-3"
+          resizeMode="contain"
+        />
+        <Text className="text-gray-900 text-xl font-bold flex-1">
+          {title || "Naigaon Market"}
+        </Text>
       </View>
 
-      {/* Search Bar */}
-      {/* The search bar is removed as per the new_code, as per the edit hint. */}
-
       {/* Right Actions */}
-      <View style={styles.rightActions}>
+      <View className="flex-row items-center space-x-6">
         {/* Sign In/Profile */}
         {showProfile && (
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation?.navigate("Profile")}>
+          <TouchableOpacity 
+            className="items-center" 
+            onPress={() => navigation?.navigate("Profile")}
+            activeOpacity={0.8}
+          >
             {user ? (
-              <InitialsAvatar name={user.name || user.username || ''} size={32} style={{ marginTop: 2, borderWidth: 2, borderColor: colors.primary }} />
+              <View className="items-center">
+                <InitialsAvatar 
+                  name={user.name || user.username || ''} 
+                  size={40} 
+                  className="border-2 border-blue-500 rounded-full shadow-lg" 
+                />
+                <Text className="text-xs text-gray-600 mt-1 font-semibold">Profile</Text>
+              </View>
             ) : (
-              <Ionicons name="person-outline" size={24} color={colors.primary} />
+              <View className="items-center">
+                <View className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full items-center justify-center shadow-lg">
+                  <Ionicons name="person-outline" size={22} color="#3b82f6" />
+                </View>
+                <Text className="text-xs text-gray-600 mt-1 font-semibold">Sign In</Text>
+              </View>
             )}
-            <Text style={styles.actionText}>{user ? "Profile" : "Sign In"}</Text>
           </TouchableOpacity>
         )}
 
         {/* Cart */}
         {showCart && (
-          <TouchableOpacity style={styles.cartButton} onPress={() => navigation?.navigate("Cart")}>
-            <View style={styles.cartIconContainer}>
-              <Ionicons name="bag-outline" size={24} color={colors.primary} />
+          <TouchableOpacity 
+            className="items-center" 
+            onPress={() => navigation?.navigate("Cart")}
+            activeOpacity={0.8}
+          >
+            <View className="relative">
+              <View className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full items-center justify-center shadow-lg">
+                <Ionicons name="bag-outline" size={22} color="#3b82f6" />
+              </View>
               {cartItemsCount > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>{cartItemsCount}</Text>
+                <View className="absolute -top-2 -right-2 bg-red-500 rounded-full min-w-[22px] h-6 items-center justify-center shadow-lg">
+                  <Text className="text-white text-xs font-bold">
+                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                  </Text>
                 </View>
               )}
             </View>
-            <Text style={styles.actionText}>Cart</Text>
+            <Text className="text-xs text-gray-600 mt-1 font-semibold">Cart</Text>
           </TouchableOpacity>
         )}
       </View>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.background,
-    paddingTop: 40,
-  },
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  logo: {
-    backgroundColor: colors.primary,
-    color: colors.background,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 4,
-    marginRight: spacing.xs,
-  },
-  brandName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.text.primary,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingHorizontal: spacing.sm,
-    marginHorizontal: spacing.sm,
-    height: 40,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacing.xs,
-    fontSize: typography.sizes.sm,
-    color: colors.text.primary,
-  },
-  rightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionButton: {
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  actionText: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  cartButton: {
-    alignItems: "center",
-  },
-  cartIconContainer: {
-    position: "relative",
-  },
-  cartBadge: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cartBadgeText: {
-    color: colors.background,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-  },
-})
 
 export default Header

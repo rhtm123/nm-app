@@ -1,45 +1,28 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
+import { View, Text, TouchableOpacity } from "react-native"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import { colors, spacing, typography } from "../theme"
 
 const ErrorMessage = ({ message, onRetry }) => {
   return (
-    <View style={styles.container}>
-      <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-      <Text style={styles.message}>{message}</Text>
-      {onRetry && (
-        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
-      )}
+    <View className="flex-1 justify-center items-center p-6">
+      <View className="items-center">
+        <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+          <Ionicons name="alert-circle-outline" size={32} color="#ef4444" />
+        </View>
+        <Text className="text-gray-600 text-lg text-center mb-6 leading-6">
+          {message}
+        </Text>
+        {onRetry && (
+          <TouchableOpacity 
+            className="bg-blue-600 px-6 py-3 rounded-xl"
+            onPress={onRetry}
+            activeOpacity={0.8}
+          >
+            <Text className="text-white font-semibold text-base">Try Again</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.lg,
-  },
-  message: {
-    fontSize: typography.sizes.md,
-    color: colors.text.secondary,
-    textAlign: "center",
-    marginVertical: spacing.md,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: colors.background,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-  },
-})
 
 export default ErrorMessage

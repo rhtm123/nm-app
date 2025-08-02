@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore from '../stores/authStore';
 import apiClient from '../config/apiClient';
 import { API_ENDPOINTS } from '../config/endpoints';
-import { colors, spacing, typography } from '../theme';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const OrdersScreen = () => {
@@ -32,95 +31,63 @@ const OrdersScreen = () => {
   };
 
   const renderOrder = ({ item }) => (
-    <TouchableOpacity style={styles.orderCard} onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}>
-      <View style={styles.orderHeader}>
-        <Text style={styles.orderNumber}>Order #{item.order_number}</Text>
-        <Text style={styles.orderStatus}>{item.payment_status}</Text>
+    <TouchableOpacity 
+      className="bg-white rounded-2xl p-4 mb-4 shadow-lg shadow-gray-300/50 border border-gray-100"
+      onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+      activeOpacity={0.8}
+    >
+      <View className="flex-row justify-between mb-1">
+        <Text className="font-bold text-gray-800 text-base">Order #{item.order_number}</Text>
+        <Text className="text-blue-600 font-bold capitalize">{item.payment_status}</Text>
       </View>
-      <Text style={styles.orderDate}>{new Date(item.created).toLocaleString()}</Text>
-      <Text style={styles.orderTotal}>Total: ₹{item.total_amount}</Text>
+      <Text className="text-gray-600 text-sm mb-1">{new Date(item.created).toLocaleString()}</Text>
+      <Text className="text-gray-800 font-bold mb-2">Total: ₹{item.total_amount}</Text>
       <FlatList
         data={item.items}
         keyExtractor={itm => itm.id.toString()}
         renderItem={({ item: orderItem }) => (
-          <Text style={styles.orderItem}>{orderItem.product_listing_name} x{orderItem.quantity}</Text>
+          <Text className="bg-gray-50 rounded-lg px-3 py-1 mr-2 text-sm text-gray-600">
+            {orderItem.product_listing_name} x{orderItem.quantity}
+          </Text>
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ marginTop: 4 }}
+        className="mt-1"
       />
     </TouchableOpacity>
   );
 
   if (loading) {
-    return <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />;
+    return (
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
   }
 
   if (!orders.length) {
-    return <View style={styles.empty}><Text>No orders found.</Text></View>;
+    return (
+      <View className="flex-1 justify-center items-center p-8">
+        <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-4">
+          <Text className="text-2xl">📦</Text>
+        </View>
+        <Text className="text-xl font-bold text-gray-800 mb-2">No Orders Yet</Text>
+        <Text className="text-gray-600 text-center">Your order history will appear here</Text>
+      </View>
+    );
   }
 
   return (
-    <FlatList
-      data={orders}
-      keyExtractor={item => item.id.toString()}
-      renderItem={renderOrder}
-      contentContainerStyle={styles.list}
-    />
+    <View className="flex-1 bg-gray-50">
+      <FlatList
+        data={orders}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderOrder}
+        contentContainerStyle={{ padding: 16 }}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  list: {
-    padding: spacing.md,
-  },
-  orderCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    elevation: 2,
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  orderNumber: {
-    fontWeight: 'bold',
-    color: colors.text.primary,
-    fontSize: typography.sizes.md,
-  },
-  orderStatus: {
-    color: colors.primary,
-    fontWeight: 'bold',
-    textTransform: 'capitalize',
-  },
-  orderDate: {
-    color: colors.text.secondary,
-    fontSize: typography.sizes.sm,
-    marginBottom: 2,
-  },
-  orderTotal: {
-    color: colors.text.primary,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  orderItem: {
-    backgroundColor: colors.background,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 6,
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-  },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 40,
-  },
-});
 
 export default OrdersScreen; 

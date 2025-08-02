@@ -1,7 +1,7 @@
 import axios from "axios"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://192.168.0.105:8000"
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://emotional-cecily-codingchaska-5e686914.koyeb.app"
 
 // Create axios instance
 const apiClient = axios.create({

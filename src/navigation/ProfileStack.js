@@ -3,6 +3,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ProfileScreen from '../screens/ProfileScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import AddressesScreen from '../screens/AddressesScreen'; // <-- Import
+import WishlistScreen from '../screens/WishlistScreen';   // <-- Import
+import SupportScreen from '../screens/SupportScreen';     // <-- Import
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +30,21 @@ const ProfileStack = () => {
         name="OrderDetail" 
         component={OrderDetailScreen} 
         options={{ title: 'Order Details' }}
+      />
+      <Stack.Screen 
+        name="Addresses" 
+        component={AddressesScreen}
+        options={{ title: 'Saved Addresses' }}
+      />
+      <Stack.Screen 
+        name="Wishlist" 
+        component={WishlistScreen}
+        options={{ title: 'Wishlist' }}
+      />
+      <Stack.Screen 
+        name="Support" 
+        component={SupportScreen}
+        options={{ title: 'Help & Support' }}
       />
     </Stack.Navigator>
   );
