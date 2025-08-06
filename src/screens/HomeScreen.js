@@ -8,6 +8,7 @@ import ErrorMessage from "../components/ErrorMessage"
 import { useProductListings, useCategories, useFeaturedProducts } from "../hooks/useProducts"
 import Header from '../components/Header';
 import { useCart } from '../context/CartContext'; // Add this import at the top
+import DeepLinkHandler from '../components/DeepLinkHandler';
 
 
 const { width } = Dimensions.get("window")
@@ -299,6 +300,7 @@ const HomeScreen = () => {
 
   return (
     <View className="flex-1 bg-gray-50">
+      <DeepLinkHandler />
       <Header title="Naigaon Market" navigation={navigation} />
       
       <ScrollView

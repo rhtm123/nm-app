@@ -119,20 +119,20 @@ const ProfileScreen = () => {
   };
 
   const renderLoginForm = () => (
-    <View style={styles.loginContainer}>
-      <View style={styles.loginHeader}>
+    <View className="flex-1 px-4 justify-center">
+      <View className="flex items-center mb-6">
         <Ionicons name="person-circle-outline" size={80} color={colors.primary} />
-        <Text style={styles.loginTitle}>Welcome to Naigaon Market</Text>
-        <Text style={styles.loginSubtitle}>Login to access your account</Text>
+        <Text className="text-2xl font-bold text-primary mt-2 mb-1 text-center">Welcome to Naigaon Market</Text>
+        <Text className="text-base text-secondary text-center">Login to access your account</Text>
       </View>
 
       {!showOTPForm ? (
-        <View style={styles.loginForm}>
-          <Text style={styles.inputLabel}>Mobile Number</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.countryCode}>+91</Text>
+        <View className="w-full">
+          <Text className="text-base font-medium text-primary mb-2">Mobile Number</Text>
+          <View className="flex flex-row items-center border border-border rounded-lg mb-4">
+            <Text className="text-base text-primary px-4 py-2 border-r border-border">+91</Text>
             <TextInput
-              style={styles.textInput}
+              className="flex-1 text-base text-primary px-4 py-2"
               placeholder="Enter mobile number"
               placeholderTextColor={colors.text.light}
               value={mobile}
@@ -143,23 +143,23 @@ const ProfileScreen = () => {
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.disabledButton]}
+            className={`bg-primary p-3 rounded-lg items-center mb-4 ${loading ? 'opacity-60' : ''}`}
             onPress={handleSendOTP}
             disabled={loading}
           >
             {loading ? (
               <LoadingSpinner size="small" color={colors.background} />
             ) : (
-              <Text style={styles.primaryButtonText}>Send OTP</Text>
+              <Text className="text-base text-background font-semibold">Send OTP</Text>
             )}
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.loginForm}>
-          <Text style={styles.inputLabel}>Enter OTP</Text>
-          <Text style={styles.otpInfo}>OTP sent to +91 {mobile}</Text>
+        <View className="w-full">
+          <Text className="text-base font-medium text-primary mb-2">Enter OTP</Text>
+          <Text className="text-sm text-secondary mb-4">OTP sent to +91 {mobile}</Text>
           <TextInput
-            style={styles.textInput}
+            className="text-base text-primary px-4 py-2 border border-border rounded-lg"
             placeholder="Enter 6-digit OTP"
             placeholderTextColor={colors.text.light}
             value={otp}
@@ -169,25 +169,25 @@ const ProfileScreen = () => {
           />
 
           <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.disabledButton]}
+            className={`bg-primary p-3 rounded-lg items-center mb-4 ${loading ? 'opacity-60' : ''}`}
             onPress={handleVerifyOTP}
             disabled={loading}
           >
             {loading ? (
               <LoadingSpinner size="small" color={colors.background} />
             ) : (
-              <Text style={styles.primaryButtonText}>Verify OTP</Text>
+              <Text className="text-base text-background font-semibold">Verify OTP</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.secondaryButton}
+            className="p-3 items-center"
             onPress={() => {
               setShowOTPForm(false)
               setOtp("")
             }}
           >
-            <Text style={styles.secondaryButtonText}>Change Number</Text>
+            <Text className="text-base text-primary font-medium">Change Number</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -195,41 +195,41 @@ const ProfileScreen = () => {
   )
 
   const renderProfileInfo = () => (
-    <View style={styles.profileContainer}>
+    <View className="flex-1">
       {/* Profile Header */}
-      <View style={styles.profileHeader}>
-        <View style={styles.avatarContainer}>
+      <View className="flex flex-row items-center p-4 bg-surface border-b border-border">
+        <View className="mr-3">
           <InitialsAvatar 
             name={`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'User'} 
             size={80} 
           />
         </View>
-        <View style={styles.profileHeaderInfo}>
-          <Text style={styles.userName}>
+        <View className="flex-1">
+          <Text className="text-2xl font-bold text-primary mb-1">
             {`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'User'}
           </Text>
           {user?.mobile && (
-            <Text style={styles.userMobile}>+91 {user.mobile}</Text>
+            <Text className="text-base text-secondary mb-1">+91 {user.mobile}</Text>
           )}
-          {user?.email && <Text style={styles.userEmail}>{user.email}</Text>}
+          {user?.email && <Text className="text-base text-secondary">{user.email}</Text>}
           {user?.gender && (
-            <Text style={styles.userGender}>
+            <Text className="text-base text-secondary">
               {user.gender.charAt(0).toUpperCase() + user.gender.slice(1)}
             </Text>
           )}
         </View>
-        <TouchableOpacity style={styles.editButton} onPress={() => setEditMode(!editMode)}>
+        <TouchableOpacity className="p-2" onPress={() => setEditMode(!editMode)}>
           <Ionicons name={editMode ? "close" : "pencil"} size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Edit Profile Form */}
       {editMode && (
-        <View style={styles.editForm}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>First Name</Text>
+        <View className="p-4 bg-background border-b border-border">
+          <View className="mb-4">
+            <Text className="text-base font-medium text-primary mb-2">First Name</Text>
             <TextInput
-              style={styles.textInput}
+              className="text-base text-primary px-4 py-2 border border-border rounded-lg"
               placeholder="Enter your first name"
               placeholderTextColor={colors.text.light}
               value={user?.first_name || ''}
@@ -240,10 +240,10 @@ const ProfileScreen = () => {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Last Name</Text>
+          <View className="mb-4">
+            <Text className="text-base font-medium text-primary mb-2">Last Name</Text>
             <TextInput
-              style={styles.textInput}
+              className="text-base text-primary px-4 py-2 border border-border rounded-lg"
               placeholder="Enter your last name"
               placeholderTextColor={colors.text.light}
               value={user?.last_name || ''}
@@ -254,10 +254,10 @@ const ProfileScreen = () => {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
+          <View className="mb-4">
+            <Text className="text-base font-medium text-primary mb-2">Email</Text>
             <TextInput
-              style={styles.textInput}
+              className="text-base text-primary px-4 py-2 border border-border rounded-lg"
               placeholder="Enter your email"
               placeholderTextColor={colors.text.light}
               value={profileData.email}
@@ -267,48 +267,48 @@ const ProfileScreen = () => {
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.disabledButton]}
+            className={`bg-primary p-3 rounded-lg items-center mb-4 ${loading ? 'opacity-60' : ''}`}
             onPress={handleUpdateProfile}
             disabled={loading}
           >
             {loading ? (
               <LoadingSpinner size="small" color={colors.background} />
             ) : (
-              <Text style={styles.primaryButtonText}>Update Profile</Text>
+              <Text className="text-base text-background font-semibold">Update Profile</Text>
             )}
           </TouchableOpacity>
         </View>
       )}
 
       {/* Menu Options */}
-      <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.menuItem} onPress={handleOrdersPress}>
+      <View className="bg-background">
+        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={handleOrdersPress}>
           <Ionicons name="bag-outline" size={24} color={colors.text.primary} />
-          <Text style={styles.menuText}>My Orders</Text>
+          <Text className="text-base font-medium text-primary ml-3">My Orders</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Addresses")}>
+        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={() => navigation.navigate("Addresses")}>
           <Ionicons name="location-outline" size={24} color={colors.text.primary} />
-          <Text style={styles.menuText}>Saved Addresses</Text>
+          <Text className="text-base font-medium text-primary ml-3">Saved Addresses</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Wishlist")}>
+        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={() => navigation.navigate("Wishlist")}>
           <Ionicons name="heart-outline" size={24} color={colors.text.primary} />
-          <Text style={styles.menuText}>Wishlist</Text>
+          <Text className="text-base font-medium text-primary ml-3">Wishlist</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Support")}>
+        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={() => navigation.navigate("Support")}>
           <Ionicons name="help-circle-outline" size={24} color={colors.text.primary} />
-          <Text style={styles.menuText}>Help & Support</Text>
+          <Text className="text-base font-medium text-primary ml-3">Help & Support</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color={colors.error} />
-          <Text style={[styles.menuText, { color: colors.error }]}>Logout</Text>
+          <Text className="text-base font-medium text-error ml-3">Logout</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
         </TouchableOpacity>
       </View>
@@ -317,182 +317,19 @@ const ProfileScreen = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View className="flex-1 bg-background">
         <LoadingSpinner />
       </View>
     )
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <View className="flex-1 bg-background">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {isAuthenticated ? renderProfileInfo() : renderLoginForm()}
       </ScrollView>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-
-  // Login Form
-  loginContainer: {
-    flex: 1,
-    padding: spacing.xl,
-    justifyContent: "center",
-  },
-  loginHeader: {
-    alignItems: "center",
-    marginBottom: spacing.xl,
-  },
-  loginTitle: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    textAlign: "center",
-  },
-  loginSubtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.text.secondary,
-    textAlign: "center",
-  },
-  loginForm: {
-    width: "100%",
-  },
-  inputLabel: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    marginBottom: spacing.lg,
-  },
-  countryCode: {
-    fontSize: typography.sizes.md,
-    color: colors.text.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: typography.sizes.md,
-    color: colors.text.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  otpInfo: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.md,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: colors.background,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  },
-  secondaryButton: {
-    paddingVertical: spacing.md,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: colors.primary,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-  },
-
-  // Profile
-  profileContainer: {
-    flex: 1,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  avatarContainer: {
-    marginRight: spacing.md,
-  },
-  profileHeaderInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  userMobile: {
-    fontSize: typography.sizes.md,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  userEmail: {
-    fontSize: typography.sizes.md,
-    color: colors.text.secondary,
-  },
-  editButton: {
-    padding: spacing.sm,
-  },
-
-  // Edit Form
-  editForm: {
-    padding: spacing.lg,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-
-  // Menu
-  menuContainer: {
-    backgroundColor: colors.background,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  menuText: {
-    flex: 1,
-    fontSize: typography.sizes.md,
-    color: colors.text.primary,
-    marginLeft: spacing.md,
-    fontWeight: typography.weights.medium,
-  },
-})
 
 export default ProfileScreen

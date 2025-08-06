@@ -193,9 +193,13 @@ export const CartProvider = ({ children }) => {
   }
 
   const getCartTotal = () => {
-    return state.items.reduce((total, item) => {
-      return total + item.price * item.quantity
-    }, 0)
+    const total = state.items.reduce((total, item) => {
+      const itemTotal = item.price * item.quantity;
+      console.log(`Cart item: ${item.name}, price: ${item.price}, quantity: ${item.quantity}, total: ${itemTotal}`);
+      return total + itemTotal;
+    }, 0);
+    console.log('Cart total calculated:', total);
+    return total;
   }
 
   const getCartItemsCount = () => {

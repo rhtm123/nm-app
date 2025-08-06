@@ -1,6 +1,8 @@
-import { View, Text, TouchableOpacity, Image, Dimensions } from "react-native"
+import { View, Text, TouchableOpacity, Image, Dimensions, Alert } from "react-native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import { useCart } from "../context/CartContext"
+import useWishlistStore from "../stores/wishlistStore"
+import useAuthStore from "../stores/authStore"
 
 const { width } = Dimensions.get("window")
 const cardWidth = (width - 16 * 3) / 2
@@ -8,12 +10,36 @@ const cardWidth = (width - 16 * 3) / 2
 const ProductCard = ({ productListing, onPress, className = "" }) => {
   console.log('ProductCard render:', productListing);
   const { addToCart, isInCart, getCartItemQuantity } = useCart()
+  const { toggleWishlist, isInWishlist } = useWishlistStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   const handleAddToCart = async () => {
     const result = await addToCart(productListing)
     if (result.success) {
       // You can show a toast or success message here
       console.log("Added to cart successfully")
+    }
+  }
+
+  const handleWishlistToggle = async (e) => {
+    e.stopPropagation(); // Prevent triggering onPress of the card
+    
+    if (!isAuthenticated || !user) {
+      Alert.alert("Login Required", "Please login to add items to wishlist");
+      return;
+    }
+
+    try {
+      const result = await toggleWishlist(productListing);
+      if (result.success) {
+        // Optional: Show success message
+        console.log(isInWishlist(productListing.id) ? "Removed from wishlist" : "Added to wishlist");
+      } else {
+        Alert.alert("Error", result.error || "Failed to update wishlist");
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      Alert.alert("Error", "Failed to update wishlist");
     }
   }
 
@@ -79,6 +105,20 @@ const ProductCard = ({ productListing, onPress, className = "" }) => {
           className="w-full h-full"
           resizeMode="cover"
         />
+        
+        {/* Wishlist Heart Icon */}
+        <TouchableOpacity
+          className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-lg"
+          onPress={handleWishlistToggle}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name={isInWishlist(productListing.id) ? "heart" : "heart-outline"}
+            size={20}
+            color={isInWishlist(productListing.id) ? "#ef4444" : "#6b7280"}
+          />
+        </TouchableOpacity>
+        
         {!inStock && (
           <View className="absolute inset-0 bg-black/50 items-center justify-center">
             <Text className="text-white text-sm font-semibold">Out of Stock</Text>

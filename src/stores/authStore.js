@@ -10,6 +10,29 @@ const useAuthStore = create((set, get) => ({
   // Actions
   setLoading: (loading) => set({ isLoading: loading }),
 
+  // Initialize auth status on app start
+  initializeAuth: async () => {
+    try {
+      set({ isLoading: true });
+      const isAuth = await authService.isAuthenticated();
+      
+      if (isAuth) {
+        const storedUser = await authService.getStoredUser();
+        set({ user: storedUser, isAuthenticated: true });
+        
+        // Initialize wishlist
+        get().initializeWishlistForUser(storedUser?.id);
+      } else {
+        set({ user: null, isAuthenticated: false });
+      }
+    } catch (error) {
+      console.error("Auth initialization failed:", error);
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   checkAuthStatus: async () => {
     try {
       set({ isLoading: true });
@@ -46,6 +69,8 @@ const useAuthStore = create((set, get) => ({
 
       if (result.success) {
         set({ user: result.data.user, isAuthenticated: true });
+        // Initialize wishlist
+        get().initializeWishlistForUser(result.data.user?.id);
       }
 
       return result;
@@ -63,6 +88,8 @@ const useAuthStore = create((set, get) => ({
 
       if (result.success) {
         set({ user: result.data, isAuthenticated: true });
+        // Initialize wishlist
+        get().initializeWishlistForUser(result.data?.id);
       }
 
       return result;
@@ -93,10 +120,40 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Initialize wishlist for user
+  initializeWishlistForUser: async (userId) => {
+    if (userId) {
+      try {
+        // Dynamic import to avoid circular dependency
+        const { default: useWishlistStore } = await import('./wishlistStore');
+        const { initializeWishlist } = useWishlistStore.getState();
+        await initializeWishlist(userId);
+      } catch (error) {
+        console.error('Error initializing wishlist:', error);
+      }
+    }
+  },
+
+  // Clear wishlist on logout
+  clearWishlistOnLogout: async () => {
+    try {
+      // Dynamic import to avoid circular dependency
+      const { default: useWishlistStore } = await import('./wishlistStore');
+      const { clearWishlist } = useWishlistStore.getState();
+      clearWishlist();
+    } catch (error) {
+      console.error('Error clearing wishlist:', error);
+    }
+  },
+
   logout: async () => {
     set({ isLoading: true });
     try {
       await authService.logout();
+      
+      // Clear wishlist
+      await get().clearWishlistOnLogout();
+      
       set({ user: null, isAuthenticated: false });
       return { success: true };
     } catch (error) {
@@ -112,6 +169,8 @@ const useAuthStore = create((set, get) => ({
       const result = await authService.loginWithPassword(username, password);
       if (result.success) {
         set({ user: result.data.user, isAuthenticated: true });
+        // Initialize wishlist
+        get().initializeWishlistForUser(result.data.user?.id);
       }
       return result;
     } catch (error) {
@@ -127,6 +186,8 @@ const useAuthStore = create((set, get) => ({
       const result = await authService.loginWithGoogle(token);
       if (result.success) {
         set({ user: result.data.user, isAuthenticated: true });
+        // Initialize wishlist
+        get().initializeWishlistForUser(result.data.user?.id);
       }
       return result;
     } catch (error) {
