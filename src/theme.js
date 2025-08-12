@@ -55,21 +55,77 @@ export const DarkTheme = {
 
 // This file defines all the colors used in the app to match the website
 export const colors = {
-  primary: "#2563eb", // Blue color from the website
+  // Primary brand colors
+  primary: "#2563eb", // Main blue
+  primaryDark: "#1d4ed8",
+  primaryLight: "#3b82f6",
   secondary: "#1e40af",
   accent: "#10b981", // Green for deals/offers
+  
+  // Background colors
   background: "#ffffff",
-  surface: "#f8fafc",
+  backgroundSecondary: "#f8fafc",
+  surface: "#ffffff",
+  surfaceSecondary: "#f1f5f9",
+  
+  // Text colors
   text: {
     primary: "#1f2937",
     secondary: "#6b7280",
     light: "#9ca3af",
+    white: "#ffffff",
+    muted: "#64748b",
   },
-  border: "#e5e7eb",
+  
+  // Border colors
+  border: {
+    primary: "#e5e7eb",
+    secondary: "#d1d5db",
+    light: "#f3f4f6",
+  },
+  
+  // Status colors
   success: "#10b981",
+  successLight: "#d1fae5",
   warning: "#f59e0b",
+  warningLight: "#fef3c7",
   error: "#ef4444",
+  errorLight: "#fee2e2",
+  info: "#3b82f6",
+  infoLight: "#dbeafe",
+  
+  // Product specific colors
   deal: "#dc2626", // Red for discount badges
+  dealLight: "#fecaca",
+  orange: "#f97316",
+  orangeLight: "#fed7aa",
+  
+  // Rating colors
+  rating: "#f59e0b",
+  ratingLight: "#fef3c7",
+  
+  // Cart and action colors
+  cart: {
+    add: "#2563eb",
+    remove: "#ef4444",
+    quantity: "#1f2937",
+    background: "#f8fafc",
+    border: "#e2e8f0",
+  },
+  
+  // Gray scale
+  gray: {
+    50: "#f9fafb",
+    100: "#f3f4f6",
+    200: "#e5e7eb",
+    300: "#d1d5db",
+    400: "#9ca3af",
+    500: "#6b7280",
+    600: "#4b5563",
+    700: "#374151",
+    800: "#1f2937",
+    900: "#111827",
+  },
 }
 
 export const spacing = {

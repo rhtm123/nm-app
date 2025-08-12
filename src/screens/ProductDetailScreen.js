@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, FlatList } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, FlatList, Alert } from "react-native"
 import { useState } from "react"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
@@ -7,6 +7,8 @@ import ProductCard from "../components/ProductCard"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { useProductVariants, useProductDetails, useRelatedProducts } from "../hooks/useProducts"
 import { useCart } from "../context/CartContext"
+import useWishlistStore from "../stores/wishlistStore"
+import useAuthStore from "../stores/authStore"
 import { colors, spacing, typography } from "../theme"
 
 const { width } = Dimensions.get("window")
@@ -16,8 +18,15 @@ const ProductDetailScreen = () => {
   const route = useRoute()
   const { productListing } = route.params
   const { addToCart, isInCart, getCartItemQuantity } = useCart()
+  const { isAuthenticated, user } = useAuthStore()
 
   const [selectedVariant, setSelectedVariant] = useState(productListing)
+  
+  // Use selector to properly subscribe to wishlist state changes
+  const isVariantInWishlist = useWishlistStore((state) => 
+    state.wishlistItemIds.has(selectedVariant.id)
+  )
+  const wishlistLoading = useWishlistStore((state) => state.isLoading)
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
@@ -42,6 +51,47 @@ const ProductDetailScreen = () => {
     if (result.success) {
       // Show success message or navigate to cart
       console.log("Added to cart successfully")
+    }
+  }
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated || !user) {
+      Alert.alert("Login Required", "Please login to add items to wishlist");
+      return;
+    }
+    
+    // Prevent multiple clicks while loading
+    if (wishlistLoading) {
+      return;
+    }
+
+    try {
+      // Get store methods directly
+      const store = useWishlistStore.getState();
+      
+      // Ensure wishlist is initialized
+      const initResult = await store.ensureWishlistInitialized(user.id);
+      if (!initResult.success) {
+        Alert.alert("Error", "Failed to initialize wishlist. Please try again.");
+        return;
+      }
+      
+      // Get current state and toggle
+      const wasInWishlist = store.isInWishlist(selectedVariant.id);
+      const result = await store.toggleWishlist(selectedVariant);
+      
+      if (result.success) {
+        const message = wasInWishlist ? "Removed from wishlist" : "Added to wishlist";
+        console.log(message);
+      } else {
+        // Only show alert for meaningful errors, not "already in wishlist"
+        if (result.error && !result.error.includes('already in wishlist')) {
+          Alert.alert("Error", result.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      Alert.alert("Error", "Failed to update wishlist");
     }
   }
 
@@ -82,8 +132,26 @@ const ProductDetailScreen = () => {
     }
 
     return (
-      <View style={styles.imageGallery}>
-        <Image source={{ uri: images[selectedImageIndex] }} style={styles.mainImage} />
+      <View className="bg-gray-50">
+        <View className="relative">
+          <Image 
+            source={{ uri: images[selectedImageIndex] }} 
+            className="w-full h-80"
+            resizeMode="contain"
+          />
+          {/* Discount Badge Overlay */}
+          {calculateDiscount() > 0 && (
+            <View className="absolute top-4 left-4 bg-red-500 px-3 py-2 rounded-lg">
+              <Text className="text-white text-sm font-bold">{calculateDiscount()}% OFF</Text>
+            </View>
+          )}
+          {/* Service Badge Overlay */}
+          {selectedVariant.is_service && (
+            <View className="absolute top-4 right-4 bg-purple-500 px-3 py-2 rounded-lg">
+              <Text className="text-white text-xs font-bold">SERVICE</Text>
+            </View>
+          )}
+        </View>
         {images.length > 1 && (
           <FlatList
             data={images}
@@ -92,13 +160,15 @@ const ProductDetailScreen = () => {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({ item, index }) => (
               <TouchableOpacity
-                style={[styles.thumbnailContainer, index === selectedImageIndex && styles.selectedThumbnail]}
+                className={`m-2 rounded-xl overflow-hidden border-2 ${
+                  index === selectedImageIndex ? 'border-blue-500' : 'border-transparent'
+                }`}
                 onPress={() => setSelectedImageIndex(index)}
               >
-                <Image source={{ uri: item }} style={styles.thumbnail} />
+                <Image source={{ uri: item }} className="w-16 h-16" resizeMode="cover" />
               </TouchableOpacity>
             )}
-            contentContainerStyle={styles.thumbnailList}
+            className="px-2 py-3"
           />
         )}
       </View>
@@ -137,81 +207,100 @@ const ProductDetailScreen = () => {
     )
   }
 
-  const renderQuantitySelector = () => (
-    <View style={styles.quantitySection}>
-      <Text style={styles.quantityLabel}>Quantity:</Text>
-      <View style={styles.quantityControls}>
-        <TouchableOpacity
-          style={[styles.quantityButton, quantity <= 1 && styles.disabledButton]}
-          onPress={() => setQuantity(Math.max(1, quantity - 1))}
-          disabled={quantity <= 1}
-        >
-          <Ionicons name="remove" size={20} color={quantity <= 1 ? colors.text.light : colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.quantityText}>{quantity}</Text>
-        <TouchableOpacity
-          style={[styles.quantityButton, quantity >= selectedVariant.buy_limit && styles.disabledButton]}
-          onPress={() => setQuantity(Math.min(selectedVariant.buy_limit, quantity + 1))}
-          disabled={quantity >= selectedVariant.buy_limit}
-        >
-          <Ionicons
-            name="add"
-            size={20}
-            color={quantity >= selectedVariant.buy_limit ? colors.text.light : colors.primary}
-          />
-        </TouchableOpacity>
+  const renderQuantitySelector = () => {
+    const maxQuantity = Math.min(selectedVariant.buy_limit || 10, selectedVariant.stock);
+    
+    return (
+      <View className="bg-white px-4 py-5 border-b border-gray-100">
+        <Text className="text-lg font-semibold text-gray-900 mb-4">Select Quantity</Text>
+        <View className="flex-row items-center justify-center bg-blue-50 rounded-2xl p-2 self-start">
+          <TouchableOpacity
+            className={`w-12 h-12 rounded-xl items-center justify-center shadow-sm ${quantity <= 1 ? 'bg-gray-200' : 'bg-blue-600'}`}
+            onPress={() => setQuantity(Math.max(1, quantity - 1))}
+            disabled={quantity <= 1}
+            activeOpacity={0.7}
+          >
+            {quantity === 1 ? (
+              <Ionicons name="trash-outline" size={20} color={quantity <= 1 ? "#9ca3af" : "#ffffff"} />
+            ) : (
+              <Ionicons name="remove" size={20} color={quantity <= 1 ? "#9ca3af" : "#ffffff"} />
+            )}
+          </TouchableOpacity>
+          <Text className="text-2xl font-bold text-gray-900 mx-6 min-w-[50px] text-center">{quantity}</Text>
+          <TouchableOpacity
+            className={`w-12 h-12 rounded-xl items-center justify-center shadow-sm ${quantity >= maxQuantity ? 'bg-gray-200' : 'bg-blue-600'}`}
+            onPress={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
+            disabled={quantity >= maxQuantity}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={20} color={quantity >= maxQuantity ? "#9ca3af" : "#ffffff"} />
+          </TouchableOpacity>
+        </View>
+        {maxQuantity <= 5 && (
+          <Text className="text-sm text-orange-600 mt-2">Only {maxQuantity} left in stock!</Text>
+        )}
       </View>
-    </View>
-  )
+    );
+  }
 
   const renderProductInfo = () => (
-    <View style={styles.productInfo}>
+    <View className="bg-white px-4 py-5 border-b border-gray-100">
       {/* Brand */}
-      {selectedVariant.brand && <Text style={styles.brandName}>{selectedVariant.brand.name}</Text>}
+      {selectedVariant.brand && (
+        <Text className="text-sm text-blue-600 font-medium mb-2 uppercase tracking-wide">
+          {selectedVariant.brand.name}
+        </Text>
+      )}
 
       {/* Product Name */}
-      <Text style={styles.productName}>{selectedVariant.name}</Text>
+      <Text className="text-2xl font-bold text-gray-900 mb-3 leading-tight">
+        {selectedVariant.name}
+      </Text>
 
       {/* Rating */}
       {selectedVariant.rating > 0 && (
-        <View style={styles.ratingContainer}>
-          <View style={styles.stars}>{renderStars(selectedVariant.rating)}</View>
-          <Text style={styles.ratingText}>({selectedVariant.rating})</Text>
+        <View className="flex-row items-center mb-4">
+          <View className="flex-row bg-green-50 px-2 py-1 rounded-lg mr-3">
+            <View className="flex-row mr-1">{renderStars(selectedVariant.rating)}</View>
+            <Text className="text-sm font-semibold text-green-700">({selectedVariant.rating})</Text>
+          </View>
           {selectedVariant.review_count > 0 && (
-            <Text style={styles.reviewCount}>{selectedVariant.review_count} reviews</Text>
+            <Text className="text-sm text-gray-500">{selectedVariant.review_count} reviews</Text>
           )}
         </View>
       )}
 
       {/* Price */}
-      <View style={styles.priceContainer}>
-        <Text style={styles.price}>₹{selectedVariant.price}</Text>
+      <View className="flex-row items-center mb-4">
+        <Text className="text-3xl font-bold text-gray-900 mr-3">₹{selectedVariant.price}</Text>
         {selectedVariant.mrp && selectedVariant.mrp > selectedVariant.price && (
           <>
-            <Text style={styles.originalPrice}>₹{selectedVariant.mrp}</Text>
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{calculateDiscount()}% OFF</Text>
+            <Text className="text-lg text-gray-400 line-through mr-3">₹{selectedVariant.mrp}</Text>
+            <View className="bg-orange-500 px-3 py-1 rounded-full">
+              <Text className="text-white text-sm font-bold">{calculateDiscount()}% OFF</Text>
             </View>
           </>
         )}
       </View>
 
       {/* Stock Status */}
-      <View style={styles.stockContainer}>
+      <View className="flex-row items-center mb-3">
         <Ionicons
           name={selectedVariant.stock > 0 ? "checkmark-circle" : "close-circle"}
-          size={16}
-          color={selectedVariant.stock > 0 ? colors.success : colors.error}
+          size={20}
+          color={selectedVariant.stock > 0 ? "#10b981" : "#ef4444"}
         />
-        <Text style={[styles.stockText, { color: selectedVariant.stock > 0 ? colors.success : colors.error }]}>
+        <Text className={`ml-2 text-base font-medium ${
+          selectedVariant.stock > 0 ? 'text-green-600' : 'text-red-500'
+        }`}>
           {selectedVariant.stock > 0 ? `${selectedVariant.stock} in stock` : "Out of stock"}
         </Text>
       </View>
 
       {/* Service Badge */}
       {selectedVariant.is_service && (
-        <View style={styles.serviceBadge}>
-          <Text style={styles.serviceBadgeText}>SERVICE</Text>
+        <View className="bg-purple-100 px-4 py-2 rounded-full self-start">
+          <Text className="text-purple-800 text-sm font-bold">SERVICE AVAILABLE</Text>
         </View>
       )}
     </View>
@@ -310,23 +399,35 @@ const ProductDetailScreen = () => {
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <View style={styles.bottomBar}>
+      <View className="flex-row items-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg">
         <TouchableOpacity
-          style={styles.wishlistButton}
-          onPress={() => {
-            /* Add to wishlist logic */
-          }}
+          className="w-14 h-14 rounded-2xl border-2 border-blue-600 items-center justify-center mr-4"
+          onPress={handleWishlistToggle}
+          activeOpacity={0.8}
         >
-          <Ionicons name="heart-outline" size={24} color={colors.primary} />
+          <Ionicons 
+            name={isVariantInWishlist ? "heart" : "heart-outline"} 
+            size={26} 
+            color={isVariantInWishlist ? "#ef4444" : "#2563eb"} 
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.addToCartButton, !inStock && styles.disabledButton]}
+          className={`flex-1 flex-row items-center justify-center py-4 rounded-2xl ${
+            !inStock ? 'bg-gray-300' : 'bg-blue-600'
+          }`}
           onPress={handleAddToCart}
           disabled={!inStock}
+          activeOpacity={0.9}
         >
-          <Ionicons name="bag-add" size={20} color={inStock ? colors.background : colors.text.light} />
-          <Text style={[styles.addToCartText, !inStock && styles.disabledText]}>
+          <Ionicons 
+            name="bag-add" 
+            size={22} 
+            color={!inStock ? "#9ca3af" : "#ffffff"} 
+          />
+          <Text className={`ml-2 text-lg font-semibold ${
+            !inStock ? 'text-gray-500' : 'text-white'
+          }`}>
             {!inStock ? "Out of Stock" : cartQuantity > 0 ? `Update Cart (${cartQuantity})` : "Add to Cart"}
           </Text>
         </TouchableOpacity>

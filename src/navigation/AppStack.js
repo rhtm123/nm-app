@@ -25,7 +25,7 @@ const AppStack = () => (
     <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
     <Stack.Screen name="Checkout" component={CheckoutScreen} />
-    <Stack.Screen name="Search" component={SearchScreen} />
+    <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search Products' }} />
     <Stack.Screen name="Addresses" component={AddressesScreen} />
     <Stack.Screen name="Wishlist" component={WishlistScreen} />
     <Stack.Screen name="Support" component={SupportScreen} />

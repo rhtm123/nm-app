@@ -1,82 +1,69 @@
 import React from "react"
-import { View, Text, TouchableOpacity, Image } from "react-native"
+import { View, Text, TouchableOpacity } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import useAuthStore from "../stores/authStore"
-import { useCart } from "../context/CartContext"
-import InitialsAvatar from './InitialsAvatar';
+import { colors } from "../theme"
 
-const Header = ({ title, showBack = false, showCart = true, showProfile = true }) => {
+const Header = ({ title, showBack = false, showSearch = true, route }) => {
   const navigation = useNavigation()
   const { user } = useAuthStore()
-  const { getCartItemsCount } = useCart()
-  const cartItemsCount = getCartItemsCount()
+  
+  // Auto-detect if we should show back button based on route
+  const shouldShowBack = showBack || (route && route.name !== 'MainTabs')
 
   return (
-    <View className="flex-row items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shadow-lg mt-10">
-      {/* Logo and Title */}
-      <View className="flex-row items-center flex-1">
-        <Image 
-          source={require('../../assets/img/logo.png')}
-          className="w-12 h-12 mr-3"
-          resizeMode="contain"
-        />
-        <Text className="text-gray-900 text-xl font-bold flex-1">
-          {title || "Naigaon Market"}
-        </Text>
-      </View>
-
-      {/* Right Actions */}
-      <View className="flex-row items-center space-x-6">
-        {/* Sign In/Profile */}
-        {showProfile && (
-          <TouchableOpacity 
-            className="items-center" 
-            onPress={() => navigation?.navigate("Profile")}
-            activeOpacity={0.8}
-          >
-            {user ? (
-              <View className="items-center">
-                <InitialsAvatar 
-                  name={user.name || user.username || ''} 
-                  size={40} 
-                  className="border-2 border-blue-500 rounded-full shadow-lg" 
-                />
-                <Text className="text-xs text-gray-600 mt-1 font-semibold">Profile</Text>
-              </View>
-            ) : (
-              <View className="items-center">
-                <View className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full items-center justify-center shadow-lg">
-                  <Ionicons name="person-outline" size={22} color="#3b82f6" />
-                </View>
-                <Text className="text-xs text-gray-600 mt-1 font-semibold">Sign In</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {/* Cart */}
-        {showCart && (
-          <TouchableOpacity 
-            className="items-center" 
-            onPress={() => navigation?.navigate("Cart")}
-            activeOpacity={0.8}
-          >
-            <View className="relative">
-              <View className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full items-center justify-center shadow-lg">
-                <Ionicons name="bag-outline" size={22} color="#3b82f6" />
-              </View>
-              {cartItemsCount > 0 && (
-                <View className="absolute -top-2 -right-2 bg-red-500 rounded-full min-w-[22px] h-6 items-center justify-center shadow-lg">
-                  <Text className="text-white text-xs font-bold">
-                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                  </Text>
-                </View>
-              )}
+    <View className="bg-white px-4 py-4 shadow-sm" style={{ paddingTop: 50 }}>
+      <View className="flex-row items-center justify-between">
+        {/* Left side - Back button or Logo */}
+        {shouldShowBack ? (
+          <View className="flex-row items-center flex-1">
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              className="w-10 h-10 bg-blue-50 rounded-lg items-center justify-center mr-3"
+            >
+              <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <View className="flex-1">
+              <Text className="text-lg font-bold text-gray-900">
+                {title || "Search Products"}
+              </Text>
             </View>
-            <Text className="text-xs text-gray-600 mt-1 font-semibold">Cart</Text>
-          </TouchableOpacity>
+          </View>
+        ) : (
+          <View className="flex-row items-center flex-1">
+            <View className="w-10 h-10 bg-blue-100 rounded-lg items-center justify-center mr-3">
+              <Text className="text-blue-600 font-bold text-lg">NM</Text>
+            </View>
+            <View>
+              <Text className="text-lg font-bold text-gray-900">
+                {title || "Naigaon Market"}
+              </Text>
+              <Text className="text-xs text-gray-500">Delivering groceries in minutes</Text>
+            </View>
+          </View>
         )}
+
+        {/* Right Actions */}
+        <View className="flex-row items-center space-x-3">
+          {/* Search */}
+          {showSearch && route?.name !== 'Search' && (
+            <TouchableOpacity 
+              onPress={() => navigation?.navigate("Search")}
+              className="w-10 h-10 bg-blue-50 rounded-lg items-center justify-center"
+            >
+              <Ionicons name="search" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+
+          {/* Notifications */}
+          <TouchableOpacity 
+            className="w-10 h-10 bg-blue-50 rounded-lg items-center justify-center relative"
+          >
+            <Ionicons name="notifications-outline" size={20} color={colors.primary} />
+            <View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   )

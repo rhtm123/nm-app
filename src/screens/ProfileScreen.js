@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from "react-native"
 import { useState, useEffect } from "react"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
@@ -7,11 +7,12 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import useAuthStore from "../stores/authStore"
 import { useCart } from "../context/CartContext"
 import { colors, spacing, typography } from "../theme"
-import InitialsAvatar from '../components/InitialsAvatar';
+import InitialsAvatar from '../components/InitialsAvatar'
+import { authService } from '../services/authService'
 
 const ProfileScreen = () => {
   const navigation = useNavigation()
-  const { user, isAuthenticated, isLoading, sendOTP, verifyOTP, logout, updateProfile } = useAuthStore()
+  const { user, isAuthenticated, isLoading, sendOTP, verifyOTP, logout } = useAuthStore()
   const { clearCart } = useCart()
 
   const [showLoginForm, setShowLoginForm] = useState(false)
@@ -20,18 +21,57 @@ const ProfileScreen = () => {
   const [otp, setOtp] = useState("")
   const [loading, setLoading] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [fetchingProfile, setFetchingProfile] = useState(false)
+  const [fullUserData, setFullUserData] = useState(null)
   const [profileData, setProfileData] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     mobile: "",
+    alternate_mobile: "",
+    gender: "",
   })
+
+  // Fetch complete user profile data
+  const fetchUserProfile = async () => {
+    if (user?.id) {
+      try {
+        setFetchingProfile(true)
+        const result = await authService.getUserProfile(user.id)
+        if (result.success) {
+          setFullUserData(result.data)
+          setProfileData({
+            first_name: result.data.first_name || "",
+            last_name: result.data.last_name || "",
+            email: result.data.email || "",
+            mobile: result.data.mobile || "",
+            alternate_mobile: result.data.alternate_mobile || "",
+            gender: result.data.gender || "",
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error)
+      } finally {
+        setFetchingProfile(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUserProfile()
+    }
+  }, [user, isAuthenticated])
 
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || '',
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
         email: user.email || "",
         mobile: user.mobile || "",
+        alternate_mobile: user.alternate_mobile || "",
+        gender: user.gender || "",
       })
     }
   }, [user])
@@ -76,15 +116,30 @@ const ProfileScreen = () => {
   }
 
   const handleUpdateProfile = async () => {
-    setLoading(true)
-    const result = await updateProfile(profileData)
-    setLoading(false)
+    if (!fullUserData?.id && !user?.id) {
+      Alert.alert("Error", "User ID not found")
+      return
+    }
 
-    if (result.success) {
-      setEditMode(false)
-      Alert.alert("Success", "Profile updated successfully")
-    } else {
-      Alert.alert("Error", result.error)
+    setLoading(true)
+    try {
+      const userId = fullUserData?.id || user?.id
+      const result = await authService.updateUserProfile(userId, profileData)
+      
+      if (result.success) {
+        setFullUserData(result.data)
+        setEditMode(false)
+        Alert.alert("Success", "Profile updated successfully")
+        // Refresh the profile data
+        fetchUserProfile()
+      } else {
+        Alert.alert("Error", result.error)
+      }
+    } catch (error) {
+      console.error('Profile update error:', error)
+      Alert.alert("Error", "Failed to update profile")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -119,20 +174,23 @@ const ProfileScreen = () => {
   };
 
   const renderLoginForm = () => (
-    <View className="flex-1 px-4 justify-center">
-      <View className="flex items-center mb-6">
-        <Ionicons name="person-circle-outline" size={80} color={colors.primary} />
-        <Text className="text-2xl font-bold text-primary mt-2 mb-1 text-center">Welcome to Naigaon Market</Text>
-        <Text className="text-base text-secondary text-center">Login to access your account</Text>
+    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1 px-4 justify-center">
+      <View className="items-center mb-8">
+        <View style={{ backgroundColor: colors.primary + '20' }} className="w-20 h-20 rounded-full items-center justify-center mb-4">
+          <Ionicons name="person-circle-outline" size={50} color={colors.primary} />
+        </View>
+        <Text style={{ color: colors.text.primary }} className="text-3xl font-bold mt-2 mb-2 text-center">Welcome to Naigaon Market</Text>
+        <Text style={{ color: colors.text.secondary }} className="text-base text-center">Login to access your account</Text>
       </View>
 
       {!showOTPForm ? (
-        <View className="w-full">
-          <Text className="text-base font-medium text-primary mb-2">Mobile Number</Text>
-          <View className="flex flex-row items-center border border-border rounded-lg mb-4">
-            <Text className="text-base text-primary px-4 py-2 border-r border-border">+91</Text>
+        <View style={{ backgroundColor: colors.surface }} className="w-full p-6 rounded-2xl shadow-lg">
+          <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-3">Mobile Number</Text>
+          <View style={{ backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }} className="flex-row items-center border rounded-xl mb-6">
+            <Text style={{ color: colors.text.primary, borderColor: colors.border.primary }} className="text-base px-4 py-3 border-r">+91</Text>
             <TextInput
-              className="flex-1 text-base text-primary px-4 py-2"
+              style={{ color: colors.text.primary }}
+              className="flex-1 text-base px-4 py-3"
               placeholder="Enter mobile number"
               placeholderTextColor={colors.text.light}
               value={mobile}
@@ -143,23 +201,34 @@ const ProfileScreen = () => {
           </View>
 
           <TouchableOpacity
-            className={`bg-primary p-3 rounded-lg items-center mb-4 ${loading ? 'opacity-60' : ''}`}
+            style={{ 
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.6 : 1,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 4
+            }}
+            className="p-4 rounded-xl items-center"
             onPress={handleSendOTP}
             disabled={loading}
+            activeOpacity={0.9}
           >
             {loading ? (
-              <LoadingSpinner size="small" color={colors.background} />
+              <LoadingSpinner size="small" color={colors.text.white} />
             ) : (
-              <Text className="text-base text-background font-semibold">Send OTP</Text>
+              <Text style={{ color: colors.text.white }} className="text-base font-bold">Send OTP</Text>
             )}
           </TouchableOpacity>
         </View>
       ) : (
-        <View className="w-full">
-          <Text className="text-base font-medium text-primary mb-2">Enter OTP</Text>
-          <Text className="text-sm text-secondary mb-4">OTP sent to +91 {mobile}</Text>
+        <View style={{ backgroundColor: colors.surface }} className="w-full p-6 rounded-2xl shadow-lg">
+          <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">Enter OTP</Text>
+          <Text style={{ color: colors.text.secondary }} className="text-sm mb-6">OTP sent to +91 {mobile}</Text>
           <TextInput
-            className="text-base text-primary px-4 py-2 border border-border rounded-lg"
+            style={{ color: colors.text.primary, backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }}
+            className="text-base px-4 py-3 border rounded-xl mb-6"
             placeholder="Enter 6-digit OTP"
             placeholderTextColor={colors.text.light}
             value={otp}
@@ -169,14 +238,24 @@ const ProfileScreen = () => {
           />
 
           <TouchableOpacity
-            className={`bg-primary p-3 rounded-lg items-center mb-4 ${loading ? 'opacity-60' : ''}`}
+            style={{
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.6 : 1,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 4
+            }}
+            className="p-4 rounded-xl items-center mb-4"
             onPress={handleVerifyOTP}
             disabled={loading}
+            activeOpacity={0.9}
           >
             {loading ? (
-              <LoadingSpinner size="small" color={colors.background} />
+              <LoadingSpinner size="small" color={colors.text.white} />
             ) : (
-              <Text className="text-base text-background font-semibold">Verify OTP</Text>
+              <Text style={{ color: colors.text.white }} className="text-base font-bold">Verify OTP</Text>
             )}
           </TouchableOpacity>
 
@@ -186,53 +265,119 @@ const ProfileScreen = () => {
               setShowOTPForm(false)
               setOtp("")
             }}
+            activeOpacity={0.7}
           >
-            <Text className="text-base text-primary font-medium">Change Number</Text>
+            <Text style={{ color: colors.primary }} className="text-base font-semibold">Change Number</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
   )
 
-  const renderProfileInfo = () => (
-    <View className="flex-1">
+  const renderProfileInfo = () => {
+    const currentData = fullUserData || user
+    const displayName = `${currentData?.first_name || ''} ${currentData?.last_name || ''}`.trim() || currentData?.username || 'User'
+    
+    return (
+    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
+      <Header title="Profile" />
+      
+      {fetchingProfile && (
+        <View className="p-4">
+          <LoadingSpinner size="small" />
+        </View>
+      )}
+      
       {/* Profile Header */}
-      <View className="flex flex-row items-center p-4 bg-surface border-b border-border">
-        <View className="mr-3">
-          <InitialsAvatar 
-            name={`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'User'} 
-            size={80} 
-          />
-        </View>
-        <View className="flex-1">
-          <Text className="text-2xl font-bold text-primary mb-1">
-            {`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'User'}
-          </Text>
-          {user?.mobile && (
-            <Text className="text-base text-secondary mb-1">+91 {user.mobile}</Text>
-          )}
-          {user?.email && <Text className="text-base text-secondary">{user.email}</Text>}
-          {user?.gender && (
-            <Text className="text-base text-secondary">
-              {user.gender.charAt(0).toUpperCase() + user.gender.slice(1)}
+      <View style={{ backgroundColor: colors.surface }} className="p-6 mx-4 mt-4 rounded-2xl shadow-lg">
+        <View className="flex-row items-center">
+          <View className="mr-4">
+            {currentData?.google_picture ? (
+              <View className="w-20 h-20 rounded-full overflow-hidden border-2 border-blue-100">
+                <Image 
+                  source={{ uri: currentData.google_picture }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </View>
+            ) : (
+              <InitialsAvatar 
+                name={displayName} 
+                size={80} 
+              />
+            )}
+          </View>
+          <View className="flex-1">
+            <Text style={{ color: colors.text.primary }} className="text-xl font-bold mb-1">
+              {displayName}
             </Text>
-          )}
+            {/* <Text style={{ color: colors.text.muted }} className="text-xs mb-2">
+              ID: {currentData?.id || 'N/A'}
+            </Text> */}
+            {currentData?.mobile && (
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="call-outline" size={16} color={colors.text.secondary} />
+                <Text style={{ color: colors.text.secondary }} className="text-sm ml-1">+91 {currentData.mobile}</Text>
+                {currentData?.mobile_verified && (
+                  <View className="ml-2 bg-green-100 px-2 py-1 rounded-full">
+                    <Text className="text-green-600 text-xs font-semibold">Verified</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {currentData?.alternate_mobile && (
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="call-outline" size={16} color={colors.text.light} />
+                <Text style={{ color: colors.text.light }} className="text-sm ml-1">Alt: +91 {currentData.alternate_mobile}</Text>
+              </View>
+            )}
+            {currentData?.email && (
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="mail-outline" size={16} color={colors.text.secondary} />
+                <Text style={{ color: colors.text.secondary }} className="text-sm ml-1">{currentData.email}</Text>
+              </View>
+            )}
+            {currentData?.gender && (
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="person-outline" size={16} color={colors.text.secondary} />
+                <Text style={{ color: colors.text.secondary }} className="text-sm ml-1">
+                  {currentData.gender.charAt(0).toUpperCase() + currentData.gender.slice(1)}
+                </Text>
+              </View>
+            )}
+            {currentData?.role && (
+              <View className="flex-row items-center">
+                <Ionicons name="shield-outline" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary }} className="text-sm ml-1 capitalize">
+                  {currentData.role}
+                </Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity 
+            style={{ backgroundColor: colors.primary + '20' }}
+            className="p-3 rounded-xl" 
+            onPress={() => setEditMode(!editMode)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={editMode ? "close" : "pencil"} size={18} color={colors.primary} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity className="p-2" onPress={() => setEditMode(!editMode)}>
-          <Ionicons name={editMode ? "close" : "pencil"} size={20} color={colors.primary} />
-        </TouchableOpacity>
       </View>
 
       {/* Edit Profile Form */}
       {editMode && (
-        <View className="p-4 bg-background border-b border-border">
+        <View style={{ backgroundColor: colors.surface }} className="p-6 mx-4 mt-4 rounded-2xl shadow-lg">
+          <Text style={{ color: colors.text.primary }} className="text-lg font-bold mb-4">Edit Profile</Text>
+          
           <View className="mb-4">
-            <Text className="text-base font-medium text-primary mb-2">First Name</Text>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">First Name</Text>
             <TextInput
-              className="text-base text-primary px-4 py-2 border border-border rounded-lg"
+              style={{ color: colors.text.primary, backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }}
+              className="text-base px-4 py-3 border rounded-xl"
               placeholder="Enter your first name"
               placeholderTextColor={colors.text.light}
-              value={user?.first_name || ''}
+              value={profileData.first_name}
               onChangeText={(text) => setProfileData({ 
                 ...profileData, 
                 first_name: text 
@@ -241,12 +386,13 @@ const ProfileScreen = () => {
           </View>
 
           <View className="mb-4">
-            <Text className="text-base font-medium text-primary mb-2">Last Name</Text>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">Last Name</Text>
             <TextInput
-              className="text-base text-primary px-4 py-2 border border-border rounded-lg"
+              style={{ color: colors.text.primary, backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }}
+              className="text-base px-4 py-3 border rounded-xl"
               placeholder="Enter your last name"
               placeholderTextColor={colors.text.light}
-              value={user?.last_name || ''}
+              value={profileData.last_name}
               onChangeText={(text) => setProfileData({ 
                 ...profileData, 
                 last_name: text 
@@ -255,9 +401,10 @@ const ProfileScreen = () => {
           </View>
 
           <View className="mb-4">
-            <Text className="text-base font-medium text-primary mb-2">Email</Text>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">Email</Text>
             <TextInput
-              className="text-base text-primary px-4 py-2 border border-border rounded-lg"
+              style={{ color: colors.text.primary, backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }}
+              className="text-base px-4 py-3 border rounded-xl"
               placeholder="Enter your email"
               placeholderTextColor={colors.text.light}
               value={profileData.email}
@@ -266,65 +413,205 @@ const ProfileScreen = () => {
             />
           </View>
 
+          <View className="mb-4">
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">Mobile Number</Text>
+            <View style={{ backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }} className="flex-row items-center border rounded-xl">
+              <Text style={{ color: colors.text.primary, borderColor: colors.border.primary }} className="text-base px-4 py-3 border-r">+91</Text>
+              <TextInput
+                style={{ color: colors.text.primary }}
+                className="flex-1 text-base px-4 py-3"
+                placeholder="Enter mobile number"
+                placeholderTextColor={colors.text.light}
+                value={profileData.mobile}
+                onChangeText={(text) => setProfileData({ ...profileData, mobile: text })}
+                keyboardType="numeric"
+                maxLength={10}
+              />
+            </View>
+          </View>
+
+          <View className="mb-4">
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">Alternate Mobile (Optional)</Text>
+            <View style={{ backgroundColor: colors.backgroundSecondary, borderColor: colors.border.primary }} className="flex-row items-center border rounded-xl">
+              <Text style={{ color: colors.text.primary, borderColor: colors.border.primary }} className="text-base px-4 py-3 border-r">+91</Text>
+              <TextInput
+                style={{ color: colors.text.primary }}
+                className="flex-1 text-base px-4 py-3"
+                placeholder="Enter alternate mobile number"
+                placeholderTextColor={colors.text.light}
+                value={profileData.alternate_mobile}
+                onChangeText={(text) => setProfileData({ ...profileData, alternate_mobile: text })}
+                keyboardType="numeric"
+                maxLength={10}
+              />
+            </View>
+          </View>
+
+          <View className="mb-6">
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-2">Gender</Text>
+            <View className="flex-row space-x-4">
+              <TouchableOpacity 
+                style={{
+                  backgroundColor: profileData.gender === 'male' ? colors.primary + '20' : colors.backgroundSecondary,
+                  borderColor: profileData.gender === 'male' ? colors.primary : colors.border.primary,
+                }}
+                className="flex-1 flex-row items-center justify-center px-4 py-3 border rounded-xl"
+                onPress={() => setProfileData({ ...profileData, gender: 'male' })}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="man-outline" 
+                  size={20} 
+                  color={profileData.gender === 'male' ? colors.primary : colors.text.secondary} 
+                />
+                <Text 
+                  style={{ color: profileData.gender === 'male' ? colors.primary : colors.text.secondary }}
+                  className="ml-2 text-base font-semibold"
+                >
+                  Male
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={{
+                  backgroundColor: profileData.gender === 'female' ? colors.primary + '20' : colors.backgroundSecondary,
+                  borderColor: profileData.gender === 'female' ? colors.primary : colors.border.primary,
+                }}
+                className="flex-1 flex-row items-center justify-center px-4 py-3 border rounded-xl"
+                onPress={() => setProfileData({ ...profileData, gender: 'female' })}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="woman-outline" 
+                  size={20} 
+                  color={profileData.gender === 'female' ? colors.primary : colors.text.secondary} 
+                />
+                <Text 
+                  style={{ color: profileData.gender === 'female' ? colors.primary : colors.text.secondary }}
+                  className="ml-2 text-base font-semibold"
+                >
+                  Female
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <TouchableOpacity
-            className={`bg-primary p-3 rounded-lg items-center mb-4 ${loading ? 'opacity-60' : ''}`}
+            style={{
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.6 : 1,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 4
+            }}
+            className="p-4 rounded-xl items-center"
             onPress={handleUpdateProfile}
             disabled={loading}
+            activeOpacity={0.9}
           >
             {loading ? (
-              <LoadingSpinner size="small" color={colors.background} />
+              <LoadingSpinner size="small" color={colors.text.white} />
             ) : (
-              <Text className="text-base text-background font-semibold">Update Profile</Text>
+              <Text style={{ color: colors.text.white }} className="text-base font-bold">Update Profile</Text>
             )}
           </TouchableOpacity>
         </View>
       )}
 
       {/* Menu Options */}
-      <View className="bg-background">
-        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={handleOrdersPress}>
-          <Ionicons name="bag-outline" size={24} color={colors.text.primary} />
-          <Text className="text-base font-medium text-primary ml-3">My Orders</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+      <View style={{ backgroundColor: colors.surface }} className="mx-4 mt-4 rounded-2xl shadow-lg overflow-hidden">
+        <TouchableOpacity 
+          style={{ borderBottomColor: colors.border.light }}
+          className="flex-row items-center justify-between p-4 border-b" 
+          onPress={handleOrdersPress}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row items-center">
+            <View style={{ backgroundColor: colors.primary + '20' }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
+              <Ionicons name="bag-outline" size={20} color={colors.primary} />
+            </View>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold">My Orders</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={() => navigation.navigate("Addresses")}>
-          <Ionicons name="location-outline" size={24} color={colors.text.primary} />
-          <Text className="text-base font-medium text-primary ml-3">Saved Addresses</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+        <TouchableOpacity 
+          style={{ borderBottomColor: colors.border.light }}
+          className="flex-row items-center justify-between p-4 border-b" 
+          onPress={() => navigation.navigate("Addresses")}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row items-center">
+            <View style={{ backgroundColor: colors.secondary + '20' }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
+              <Ionicons name="location-outline" size={20} color={colors.secondary} />
+            </View>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold">Saved Addresses</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={() => navigation.navigate("Wishlist")}>
-          <Ionicons name="heart-outline" size={24} color={colors.text.primary} />
-          <Text className="text-base font-medium text-primary ml-3">Wishlist</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+        <TouchableOpacity 
+          style={{ borderBottomColor: colors.border.light }}
+          className="flex-row items-center justify-between p-4 border-b" 
+          onPress={() => navigation.navigate("Wishlist")}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row items-center">
+            <View style={{ backgroundColor: colors.error + '20' }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
+              <Ionicons name="heart-outline" size={20} color={colors.error} />
+            </View>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold">Wishlist</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={() => navigation.navigate("Support")}>
-          <Ionicons name="help-circle-outline" size={24} color={colors.text.primary} />
-          <Text className="text-base font-medium text-primary ml-3">Help & Support</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+        <TouchableOpacity 
+          style={{ borderBottomColor: colors.border.light }}
+          className="flex-row items-center justify-between p-4 border-b" 
+          onPress={() => navigation.navigate("Support")}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row items-center">
+            <View style={{ backgroundColor: colors.warning + '20' }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
+              <Ionicons name="help-circle-outline" size={20} color={colors.warning} />
+            </View>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold">Help & Support</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.text.light} />
         </TouchableOpacity>
 
-        <TouchableOpacity className="flex flex-row items-center p-4 border-b border-border" onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={colors.error} />
-          <Text className="text-base font-medium text-error ml-3">Logout</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.light} />
+        <TouchableOpacity 
+          className="flex-row items-center justify-between p-4" 
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row items-center">
+            <View style={{ backgroundColor: colors.error + '20' }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
+              <Ionicons name="log-out-outline" size={20} color={colors.error} />
+            </View>
+            <Text style={{ color: colors.error }} className="text-base font-semibold">Logout</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.text.light} />
         </TouchableOpacity>
       </View>
+      
+      <View className="h-6" />
     </View>
   )
+  }
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background">
+      <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
         <LoadingSpinner />
       </View>
     )
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {isAuthenticated ? renderProfileInfo() : renderLoginForm()}
       </ScrollView>

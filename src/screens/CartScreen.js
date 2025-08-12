@@ -9,6 +9,7 @@ import useOffersStore from "../stores/offersStore"
 import LoadingSpinner from "../components/LoadingSpinner"
 import CouponSection from '../components/checkout/CouponSection'
 import AvailableOffers from '../components/checkout/AvailableOffers'
+import { colors } from '../theme'
 
 const CartScreen = () => {
   const navigation = useNavigation()
@@ -68,34 +69,99 @@ const CartScreen = () => {
   const renderCartItem = ({ item }) => {
     const isUpdating = updatingItems[item.id]
     const maxQuantity = Math.min(item.buy_limit || 10, item.stock)
+    const discountPercent = item.mrp && item.mrp > item.price ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0
+    
     return (
-      <View className="flex-row bg-white rounded-xl p-4 mb-4 shadow-lg border border-gray-100">
-        <TouchableOpacity onPress={() => navigation.navigate("ProductDetail", { productListing: item })}>
-          <Image source={{ uri: item.image || "/placeholder.svg?height=100&width=100" }} className="w-20 h-20 rounded-lg mr-4 bg-gray-100" />
-        </TouchableOpacity>
-        <View className="flex-1">
+      <View style={{ backgroundColor: colors.surface }} className="rounded-2xl p-4 mb-3 shadow-lg">
+        <View className="flex-row">
           <TouchableOpacity onPress={() => navigation.navigate("ProductDetail", { productListing: item })}>
-            {item.brand && <Text className="text-xs text-gray-500 mb-1">{item.brand.name}</Text>}
-            <Text className="text-base font-semibold text-gray-900 mb-1" numberOfLines={2}>{item.name}</Text>
-            {item.variant_name && <Text className="text-xs text-gray-400 mb-2">{item.variant_name}</Text>}
+            <View style={{ backgroundColor: colors.gray[50] }} className="w-24 h-24 rounded-xl items-center justify-center p-2">
+              <Image 
+                source={{ uri: item.image || "/placeholder.svg?height=100&width=100" }} 
+                className="w-full h-full rounded-lg" 
+                resizeMode="contain"
+              />
+            </View>
           </TouchableOpacity>
-          <View className="flex-row items-center mb-2">
-            <Text className="text-lg font-bold text-gray-900">₹{item.price}</Text>
-            {item.mrp && item.mrp > item.price && <Text className="text-sm text-gray-400 line-through ml-2">₹{item.mrp}</Text>}
-          </View>
-          <View className="flex-row items-center mb-2">
-            <TouchableOpacity className={`w-8 h-8 rounded-full border border-gray-200 bg-gray-50 items-center justify-center ${item.quantity <= 1 || isUpdating ? 'opacity-50' : ''}`} onPress={() => handleQuantityChange(item.id, item.quantity - 1)} disabled={item.quantity <= 1 || isUpdating}>
-              <Ionicons name="remove" size={16} color="#1f2937" />
+          
+          <View className="flex-1 ml-4">
+            <TouchableOpacity onPress={() => navigation.navigate("ProductDetail", { productListing: item })}>
+              {item.brand && (
+                <Text style={{ color: colors.text.muted }} className="text-xs mb-1 uppercase tracking-wide font-medium">
+                  {item.brand.name}
+                </Text>
+              )}
+              <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-1 leading-5" numberOfLines={2}>
+                {item.name}
+              </Text>
+              {item.variant_name && (
+                <Text style={{ color: colors.text.secondary }} className="text-sm mb-2">
+                  {item.variant_name}
+                </Text>
+              )}
             </TouchableOpacity>
-            <Text className="mx-4 text-base font-medium min-w-[30px] text-center">{item.quantity}</Text>
-            <TouchableOpacity className={`w-8 h-8 rounded-full border border-gray-200 bg-gray-50 items-center justify-center ${item.quantity >= maxQuantity || isUpdating ? 'opacity-50' : ''}`} onPress={() => handleQuantityChange(item.id, item.quantity + 1)} disabled={item.quantity >= maxQuantity || isUpdating}>
-              <Ionicons name="add" size={16} color="#1f2937" />
-            </TouchableOpacity>
+            
+            <View className="flex-row items-center mb-3">
+              <Text style={{ color: colors.text.primary }} className="text-lg font-bold">₹{item.price}</Text>
+              {item.mrp && item.mrp > item.price && (
+                <>
+                  <Text style={{ color: colors.text.light }} className="text-sm line-through ml-2">₹{item.mrp}</Text>
+                  <View style={{ backgroundColor: colors.success }} className="px-2 py-1 rounded-full ml-2">
+                    <Text style={{ color: colors.text.white }} className="text-xs font-bold">{discountPercent}% OFF</Text>
+                  </View>
+                </>
+              )}
+            </View>
+            
+            {/* Quantity Controls */}
+            <View className="flex-row items-center justify-between">
+              <View style={{ backgroundColor: colors.gray[50] }} className="flex-row items-center rounded-xl p-1">
+                <TouchableOpacity 
+                  style={{
+                    backgroundColor: item.quantity <= 1 || isUpdating ? colors.gray[200] : colors.primary,
+                    opacity: item.quantity <= 1 || isUpdating ? 0.5 : 1
+                  }}
+                  className="w-9 h-9 rounded-lg items-center justify-center"
+                  onPress={() => handleQuantityChange(item.id, item.quantity - 1)} 
+                  disabled={item.quantity <= 1 || isUpdating}
+                  activeOpacity={0.7}
+                >
+                  {item.quantity === 1 ? (
+                    <Ionicons name="trash-outline" size={14} color={colors.text.white} />
+                  ) : (
+                    <Ionicons name="remove" size={14} color={colors.text.white} />
+                  )}
+                </TouchableOpacity>
+                
+                <Text style={{ color: colors.text.primary }} className="text-lg font-bold mx-4 min-w-[30px] text-center">
+                  {item.quantity}
+                </Text>
+                
+                <TouchableOpacity 
+                  style={{
+                    backgroundColor: item.quantity >= maxQuantity || isUpdating ? colors.gray[200] : colors.primary,
+                    opacity: item.quantity >= maxQuantity || isUpdating ? 0.5 : 1
+                  }}
+                  className="w-9 h-9 rounded-lg items-center justify-center"
+                  onPress={() => handleQuantityChange(item.id, item.quantity + 1)} 
+                  disabled={item.quantity >= maxQuantity || isUpdating}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add" size={14} color={colors.text.white} />
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity 
+                className="flex-row items-center" 
+                onPress={() => handleRemoveItem(item.id)}
+                style={{ backgroundColor: colors.error + '10' }}
+                className="flex-row items-center px-3 py-2 rounded-lg"
+              >
+                <Ionicons name="trash-outline" size={14} color={colors.error} />
+                <Text style={{ color: colors.error }} className="text-sm ml-1 font-medium">Remove</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <TouchableOpacity className="flex-row items-center self-start mt-1" onPress={() => handleRemoveItem(item.id)}>
-            <Ionicons name="trash-outline" size={16} color="#ef4444" />
-            <Text className="text-xs text-red-500 ml-1">Remove</Text>
-          </TouchableOpacity>
         </View>
       </View>
     )
@@ -103,11 +169,11 @@ const CartScreen = () => {
 
   const renderEmptyCart = () => (
     <View className="flex-1 justify-center items-center px-8">
-      <Ionicons name="cart-outline" size={80} color="#6b7280" />
-      <Text className="text-2xl font-bold text-gray-900 mt-6 mb-2">Your cart is empty</Text>
-      <Text className="text-base text-gray-500 text-center mb-8">Add some products to get started</Text>
-      <TouchableOpacity className="bg-blue-600 px-8 py-4 rounded-lg" onPress={() => navigation.navigate("Home")}> 
-        <Text className="text-white text-base font-medium">Shop Now</Text>
+      <Ionicons name="cart-outline" size={80} color={colors.text.secondary} />
+      <Text style={{ color: colors.text.primary }} className="text-2xl font-bold mt-6 mb-2">Your cart is empty</Text>
+      <Text style={{ color: colors.text.secondary }} className="text-base text-center mb-8">Add some products to get started</Text>
+      <TouchableOpacity style={{ backgroundColor: colors.primary }} className="px-8 py-4 rounded-lg" onPress={() => navigation.navigate("Home")}> 
+        <Text style={{ color: colors.text.white }} className="text-base font-medium">Shop Now</Text>
       </TouchableOpacity>
     </View>
   )
@@ -120,39 +186,73 @@ const CartScreen = () => {
     const deliveryFee = subtotal < 200 ? 40 : 0
     const handlingFee = 0
     const finalTotal = Math.round(subtotal - totalDiscount + deliveryFee + handlingFee)
+    const totalSavings = savings + totalDiscount
+    
     return (
-      <View className="bg-white p-6 border-t border-gray-200">
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-base text-gray-500">Items ({itemsCount})</Text>
-          <Text className="text-base font-bold text-gray-900">₹{subtotal}</Text>
-        </View>
-        {savings > 0 && (
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-base text-green-600">Product Savings</Text>
-            <Text className="text-base text-green-600 font-bold">-₹{savings}</Text>
+      <View style={{ backgroundColor: colors.surface }} className="mx-4 mb-4 p-5 rounded-2xl shadow-lg">
+        <Text style={{ color: colors.text.primary }} className="text-lg font-bold mb-4">Bill Details</Text>
+        
+        <View className="space-y-3">
+          <View className="flex-row justify-between items-center">
+            <Text style={{ color: colors.text.secondary }} className="text-base">Items ({itemsCount})</Text>
+            <Text style={{ color: colors.text.primary }} className="text-base font-semibold">₹{subtotal}</Text>
           </View>
-        )}
-        {totalDiscount > 0 && (
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-base text-green-600">Discount</Text>
-            <Text className="text-base text-green-600 font-bold">-₹{totalDiscount}</Text>
+          
+          {savings > 0 && (
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center">
+                <Ionicons name="pricetag" size={16} color={colors.success} />
+                <Text style={{ color: colors.success }} className="text-base ml-1">Product Savings</Text>
+              </View>
+              <Text style={{ color: colors.success }} className="text-base font-semibold">-₹{savings}</Text>
+            </View>
+          )}
+          
+          {totalDiscount > 0 && (
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center">
+                <Ionicons name="gift" size={16} color={colors.success} />
+                <Text style={{ color: colors.success }} className="text-base ml-1">Coupon Discount</Text>
+              </View>
+              <Text style={{ color: colors.success }} className="text-base font-semibold">-₹{totalDiscount}</Text>
+            </View>
+          )}
+          
+          <View className="flex-row justify-between items-center">
+            <View className="flex-row items-center">
+              <Ionicons name="bicycle" size={16} color={deliveryFee > 0 ? colors.text.secondary : colors.success} />
+              <Text style={{ color: colors.text.secondary }} className="text-base ml-1">Delivery Fee</Text>
+            </View>
+            <Text style={{ color: deliveryFee > 0 ? colors.text.primary : colors.success }} className="text-base font-semibold">
+              {deliveryFee > 0 ? `₹${deliveryFee}` : 'FREE'}
+            </Text>
           </View>
-        )}
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-base text-gray-500">Delivery Fee</Text>
-          <Text className="text-base font-bold text-gray-900">{deliveryFee > 0 ? `₹${deliveryFee}` : 'FREE'}</Text>
+          
+          {deliveryFee > 0 && subtotal < 200 && (
+            <View style={{ backgroundColor: colors.primaryLight + '15' }} className="p-3 rounded-xl">
+              <Text style={{ color: colors.primary }} className="text-sm font-medium text-center">
+                Add ₹{200 - subtotal} more to get FREE delivery
+              </Text>
+            </View>
+          )}
         </View>
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-base text-gray-500">Handling Fee</Text>
-          <Text className="text-base font-bold text-gray-900">{handlingFee > 0 ? `₹${handlingFee}` : 'FREE'}</Text>
+        
+        <View style={{ backgroundColor: colors.border.light }} className="h-px my-4" />
+        
+        <View className="flex-row justify-between items-center mb-3">
+          <Text style={{ color: colors.text.primary }} className="text-lg font-bold">Total Amount</Text>
+          <Text style={{ color: colors.text.primary }} className="text-xl font-bold">₹{finalTotal}</Text>
         </View>
-        <View className="h-px bg-gray-200 my-4" />
-        <View className="flex-row justify-between items-center">
-          <Text className="text-lg font-bold text-gray-900">Total Amount</Text>
-          <Text className="text-lg font-bold text-gray-900">₹{finalTotal}</Text>
-        </View>
-        {(savings + totalDiscount) > 0 && (
-          <Text className="text-green-600 text-center mt-2">You will save ₹{savings + totalDiscount} on this order</Text>
+        
+        {totalSavings > 0 && (
+          <View style={{ backgroundColor: colors.success + '15' }} className="p-3 rounded-xl">
+            <View className="flex-row items-center justify-center">
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={{ color: colors.success }} className="text-sm font-bold ml-1">
+                You saved ₹{totalSavings} on this order!
+              </Text>
+            </View>
+          </View>
         )}
       </View>
     )
@@ -160,7 +260,7 @@ const CartScreen = () => {
 
   if (cartItems.length === 0) {
     return (
-      <View className="flex-1 bg-gray-50">
+      <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
         <Header navigation={navigation} title="Shopping Cart" showSearch={false} />
         {renderEmptyCart()}
       </View>
@@ -168,12 +268,12 @@ const CartScreen = () => {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
       <Header navigation={navigation} title="Shopping Cart" showSearch={false} />
-      <View className="flex-row justify-between items-center px-4 py-2 border-b border-gray-200 bg-white">
-        <Text className="text-base text-gray-500">{getCartItemsCount()} items in cart</Text>
+      <View style={{ backgroundColor: colors.surface, borderBottomColor: colors.border.primary }} className="flex-row justify-between items-center px-4 py-2 border-b">
+        <Text style={{ color: colors.text.secondary }} className="text-base">{getCartItemsCount()} items in cart</Text>
         <TouchableOpacity onPress={handleClearCart}>
-          <Text className="text-base text-red-500 font-medium">Clear All</Text>
+          <Text style={{ color: colors.error }} className="text-base font-medium">Clear All</Text>
         </TouchableOpacity>
       </View>
       <FlatList
@@ -190,10 +290,26 @@ const CartScreen = () => {
         )}
       />
       {renderCartSummary()}
-      <View className="px-6 py-4 bg-white border-t border-gray-200">
-        <TouchableOpacity className="flex-row items-center justify-center bg-blue-600 py-4 rounded-lg" onPress={handleCheckout}>
-          <Text className="text-white text-lg font-semibold mr-2">Proceed to Checkout</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+      <View style={{ backgroundColor: colors.surface }} className="px-4 py-6">
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8
+          }} 
+          className="flex-row items-center justify-center py-4 rounded-2xl" 
+          onPress={handleCheckout}
+          activeOpacity={0.9}
+        >
+          <Text style={{ color: colors.text.white }} className="text-lg font-bold mr-2">
+            Proceed to Checkout
+          </Text>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} className="w-8 h-8 rounded-full items-center justify-center">
+            <Ionicons name="arrow-forward" size={18} color={colors.text.white} />
+          </View>
         </TouchableOpacity>
       </View>
     </View>

@@ -7,119 +7,13 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import ErrorMessage from "../components/ErrorMessage"
 import { useProductListings, useCategories, useFeaturedProducts } from "../hooks/useProducts"
 import Header from '../components/Header';
-import { useCart } from '../context/CartContext'; // Add this import at the top
+import { useCart } from '../context/CartContext';
 import DeepLinkHandler from '../components/DeepLinkHandler';
+import { colors } from '../theme';
 
 
 const { width } = Dimensions.get("window")
 
-// Simple Product Card for Home Screen
-const HomeProductCard = ({ item, navigation }) => {
-  const { addToCart, getCartItemQuantity } = useCart();
-  const cartQuantity = getCartItemQuantity(item.id);
-
-  const calculateDiscount = () => {
-    if (item.mrp && item.price) {
-      const discount = ((item.mrp - item.price) / item.mrp) * 100;
-      return Math.round(discount);
-    }
-    return 0;
-  };
-
-  const discount = calculateDiscount();
-
-  return (
-    <View className="w-44 mr-5">
-      <TouchableOpacity 
-        onPress={() => navigation.navigate('ProductDetail', { productListing: item })} 
-        className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
-      >
-        {/* Product Image Container */}
-        <View className="relative h-48 bg-gray-100">
-          {item.main_image || item.thumbnail ? (
-      <Image
-              source={{ uri: item.main_image || item.thumbnail }}
-              className="w-full h-full"
-        resizeMode="cover"
-      />
-          ) : (
-            <View className="w-full h-full bg-gray-200 items-center justify-center">
-              <Ionicons name="image-outline" size={48} color="#9ca3af" />
-            </View>
-          )}
-          
-          {/* Discount Badge */}
-          {discount > 0 && (
-            <View className="absolute top-2 left-2 bg-red-500 px-2 py-1 rounded-md">
-              <Text className="text-white text-xs font-bold">{discount}% OFF</Text>
-            </View>
-          )}
-
-          {/* Brand Badge */}
-          {item.brand && (
-            <View className="absolute top-2 right-2 bg-black px-2 py-1 rounded-md">
-              <Text className="text-white text-xs font-semibold">{item.brand.name}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Product Info */}
-        <View className="p-3">
-          {/* Product Name */}
-          <Text className="text-sm font-semibold text-gray-900 mb-1" numberOfLines={2}>
-            {item.name || "Product Name"}
-          </Text>
-
-          {/* Variant */}
-          {item.variant_name && (
-            <Text className="text-xs text-gray-500 mb-2">{item.variant_name}</Text>
-          )}
-
-          {/* Rating */}
-          {item.rating > 0 && (
-            <View className="flex-row items-center mb-2">
-              <View className="flex-row mr-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Ionicons
-                    key={star}
-                    name={star <= item.rating ? "star" : "star-outline"}
-                    size={12}
-                    color="#f59e0b"
-                  />
-                ))}
-              </View>
-              <Text className="text-xs text-gray-600">({item.rating})</Text>
-            </View>
-          )}
-
-          {/* Price */}
-          <View className="flex-row items-center mb-2">
-            <Text className="text-lg font-bold text-gray-900 mr-2">₹{item.price || 0}</Text>
-            {item.mrp && item.mrp > item.price && (
-              <Text className="text-sm text-gray-400 line-through">₹{item.mrp}</Text>
-            )}
-          </View>
-
-          {/* Stock Info */}
-          <Text className="text-xs text-gray-500 mb-3">
-            {item.stock > 0 ? `${item.stock} in stock` : "Out of stock"}
-          </Text>
-
-          {/* Add Button */}
-          <TouchableOpacity
-            className={`bg-blue-600 py-2 rounded-lg items-center ${item.stock <= 0 ? 'opacity-50' : ''}`}
-            disabled={item.stock <= 0}
-            onPress={() => addToCart(item)}
-          >
-            <Text className="text-white font-bold text-sm">
-              {cartQuantity > 0 ? `In Cart (${cartQuantity})` : 'ADD TO CART'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-};
 
 // Simple Category Card
 const HomeCategoryCard = ({ item, navigation }) => {
@@ -301,7 +195,26 @@ const HomeScreen = () => {
   return (
     <View className="flex-1 bg-gray-50">
       <DeepLinkHandler />
-      <Header title="Naigaon Market" navigation={navigation} />
+      <Header title="Naigaon Market" navigation={navigation} showSearch={true} />
+      
+      {/* Search Bar and Location */}
+      <View className="bg-white px-4 py-3 shadow-sm">
+        <TouchableOpacity 
+          className="flex-row items-center bg-blue-50 rounded-xl px-4 py-3 mb-3 border border-blue-100"
+          onPress={() => navigation.navigate('Search')}
+        >
+          <Ionicons name="search" size={20} color="#2563eb" />
+          <Text className="text-blue-600 ml-3 flex-1">Search "milk" "bread" "eggs"</Text>
+          <Ionicons name="chevron-forward" size={16} color="#2563eb" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity className="flex-row items-center">
+          <Ionicons name="location" size={18} color="#16a34a" />
+          <Text className="text-sm font-semibold text-gray-900 ml-2">Deliver to Home</Text>
+          <Text className="text-xs text-gray-500 ml-1">• Naigaon, Maharashtra 401208</Text>
+          <Ionicons name="chevron-down" size={16} color="#6b7280" className="ml-auto" />
+        </TouchableOpacity>
+      </View>
       
       <ScrollView
         className="flex-1"
@@ -410,7 +323,7 @@ const HomeScreen = () => {
         horizontal
         showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => <HomeProductCard item={item} navigation={navigation} />}
+              renderItem={({ item }) => <View style={{ width: 180 }}><ProductCard productListing={item} onPress={() => navigation.navigate('ProductDetail', { productListing: item })} className="mr-3" /></View>}
               contentContainerStyle={{ paddingHorizontal: 16 }}
             />
           </View>
@@ -478,7 +391,7 @@ const HomeScreen = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => <HomeProductCard item={item} navigation={navigation} />}
+              renderItem={({ item }) => <View style={{ width: 180 }}><ProductCard productListing={item} onPress={() => navigation.navigate('ProductDetail', { productListing: item })} className="mr-3" /></View>}
               contentContainerStyle={{ paddingHorizontal: 16 }}
         />
       </View>

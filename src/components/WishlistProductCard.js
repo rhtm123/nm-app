@@ -3,28 +3,19 @@ import { memo, useCallback } from "react"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import { useCart } from "../context/CartContext"
 import useWishlistStore from "../stores/wishlistStore"
-import useAuthStore from "../stores/authStore"
 import { colors } from "../theme"
 
 const { width } = Dimensions.get("window")
-const cardWidth = (width - 16 * 3) / 2
 
-const ProductCard = ({ productListing, onPress, className = "", style = {}, width = null }) => {
-  const { addToCart, isInCart, getCartItemQuantity, updateQuantity, removeFromCart } = useCart()
-  const { isAuthenticated, user } = useAuthStore()
-  
-  // Use selector to properly subscribe to wishlist state changes
-  const isProductInWishlist = useWishlistStore((state) => 
-    state.wishlistItemIds.has(productListing.id)
-  )
-  const wishlistLoading = useWishlistStore((state) => state.isLoading)
+const WishlistProductCard = ({ productListing, onPress, onRemove, className = "", style = {} }) => {
+  const { addToCart, getCartItemQuantity, updateQuantity, removeFromCart } = useCart()
   
   const handleAddToCart = useCallback(async () => {
-    const result = await addToCart(productListing)
+    await addToCart(productListing)
   }, [addToCart, productListing])
 
   const handleIncreaseQuantity = useCallback(async () => {
-    const result = await addToCart(productListing, 1)
+    await addToCart(productListing, 1)
   }, [addToCart, productListing])
 
   const handleDecreaseQuantity = useCallback(async () => {
@@ -36,42 +27,10 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
     }
   }, [getCartItemQuantity, updateQuantity, removeFromCart, productListing.id])
 
-  const handleWishlistToggle = useCallback(async (e) => {
-    e.stopPropagation(); // Prevent triggering onPress of the card
-    
-    if (!isAuthenticated || !user) {
-      Alert.alert("Login Required", "Please login to add items to wishlist");
-      return;
-    }
-    
-    // Prevent multiple clicks while loading
-    if (wishlistLoading) {
-      return;
-    }
-
-    try {
-      // Get store methods directly
-      const store = useWishlistStore.getState();
-      
-      // Ensure wishlist is initialized
-      const initResult = await store.ensureWishlistInitialized(user.id);
-      if (!initResult.success) {
-        Alert.alert("Error", "Failed to initialize wishlist. Please try again.");
-        return;
-      }
-      
-      // Get current state and toggle
-      const wasInWishlist = store.isInWishlist(productListing.id);
-      const result = await store.toggleWishlist(productListing);
-      
-      if (!result.success && result.error && !result.error.includes('already in wishlist')) {
-        Alert.alert("Error", result.error);
-      }
-    } catch (error) {
-      console.error('Error toggling wishlist:', error);
-      Alert.alert("Error", "Failed to update wishlist");
-    }
-  }, [isAuthenticated, user, wishlistLoading, productListing])
+  const handleRemoveFromWishlist = useCallback((e) => {
+    e.stopPropagation()
+    onRemove(productListing.id)
+  }, [onRemove, productListing.id])
 
   const renderStars = (rating) => {
     const stars = []
@@ -120,6 +79,30 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
         </View>
       )}
 
+      {/* Remove from Wishlist Cross Icon */}
+      <TouchableOpacity
+        style={{ 
+          backgroundColor: colors.error, 
+          position: 'absolute', 
+          top: 6, 
+          right: 6, 
+          zIndex: 10,
+          borderRadius: 12,
+          width: 24,
+          height: 24,
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+        onPress={handleRemoveFromWishlist}
+        activeOpacity={0.8}
+      >
+        <Ionicons
+          name="close"
+          size={14}
+          color="white"
+        />
+      </TouchableOpacity>
+
       {/* Product Image */}
       <View style={{ backgroundColor: colors.gray[50] }} className="relative h-32">
         <Image
@@ -129,20 +112,6 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
           className="w-full h-full p-2"
           resizeMode="contain"
         />
-        
-        {/* Wishlist Heart Icon */}
-        <TouchableOpacity
-          style={{ backgroundColor: colors.surface, position: 'absolute', top: 6, right: 6 }}
-          className="rounded-full p-1.5 shadow-sm"
-          onPress={handleWishlistToggle}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name={isProductInWishlist ? "heart" : "heart-outline"}
-            size={14}
-            color={isProductInWishlist ? colors.error : colors.text.secondary}
-          />
-        </TouchableOpacity>
         
         {!inStock && (
           <View className="absolute inset-0 bg-black/50 items-center justify-center">
@@ -251,4 +220,4 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
   )
 }
 
-export default memo(ProductCard)
+export default memo(WishlistProductCard)

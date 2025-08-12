@@ -3,103 +3,13 @@ import { useState } from "react"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
+import ProductCard from "../components/ProductCard"
 import { useCart } from "../context/CartContext"
 import LoadingSpinner from "../components/LoadingSpinner"
 import ErrorMessage from "../components/ErrorMessage"
 import { useProductsByCategory } from "../hooks/useProducts"
 import { colors, spacing, typography } from "../theme"
 
-const ProductCard = ({ productListing, onPress }) => {
-  const { addToCart, getCartItemQuantity } = useCart();
-  const cartQuantity = getCartItemQuantity(productListing.id);
-  const discount = productListing.mrp && productListing.price
-    ? Math.round(((productListing.mrp - productListing.price) / productListing.mrp) * 100)
-    : 0;
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      className="bg-white rounded-2xl shadow-lg border border-gray-100 m-2 flex-1 min-w-[46%] max-w-[48%] overflow-hidden"
-      activeOpacity={0.9}
-      style={{ flexBasis: "48%" }}
-    >
-      {/* Discount Badge */}
-      {discount > 0 && (
-        <View className="absolute top-2 left-2 bg-red-500 px-2 py-1 rounded-md z-10">
-          <Text className="text-white text-xs font-bold">{discount}% OFF</Text>
-        </View>
-      )}
-      {/* Product Image */}
-      <View className="w-full h-32 bg-gray-50 items-center justify-center">
-        {productListing.main_image || productListing.thumbnail ? (
-          <Image
-            source={{ uri: productListing.main_image || productListing.thumbnail }}
-            className="w-20 h-28"
-            resizeMode="contain"
-          />
-        ) : (
-          <View className="w-20 h-28 bg-gray-200 items-center justify-center">
-            <Ionicons name="image-outline" size={32} color="#9ca3af" />
-          </View>
-        )}
-      </View>
-      {/* Product Info */}
-      <View className="p-3">
-        <Text className="text-xs font-bold text-gray-500 uppercase mb-1" numberOfLines={1}>
-          {productListing.brand?.name}
-        </Text>
-        <Text className="text-sm font-semibold text-gray-900 mb-1" numberOfLines={2}>
-          {productListing.name}
-        </Text>
-        {productListing.variant_name && (
-          <Text className="text-xs text-gray-500 mb-1 italic">{productListing.variant_name}</Text>
-        )}
-        {/* Rating */}
-        {productListing.rating > 0 && (
-          <View className="flex-row items-center mb-1">
-            <View className="flex-row mr-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Ionicons
-                  key={star}
-                  name={star <= productListing.rating ? "star" : "star-outline"}
-                  size={10}
-                  color="#f59e0b"
-                />
-              ))}
-            </View>
-            <Text className="text-xs text-gray-500">({productListing.rating})</Text>
-            {productListing.review_count > 0 && (
-              <Text className="text-xs text-gray-400 ml-1">{productListing.review_count} reviews</Text>
-            )}
-          </View>
-        )}
-        {/* Price */}
-        <View className="flex-row items-center mb-1">
-          <Text className="text-lg font-bold text-gray-900 mr-2">₹{productListing.price}</Text>
-          {productListing.mrp && productListing.mrp > productListing.price && (
-            <Text className="text-sm text-gray-400 line-through">₹{productListing.mrp}</Text>
-          )}
-        </View>
-        {/* Stock Info */}
-        <Text className="text-xs text-gray-500 mb-2">
-          {productListing.stock > 0 ? `${productListing.stock} in stock` : "Out of stock"}
-        </Text>
-        {/* Add to Cart Button */}
-        <TouchableOpacity
-          className={`flex-row items-center justify-center py-2 rounded-lg ${productListing.stock > 0 ? 'bg-blue-600' : 'bg-gray-300'}`}
-          onPress={() => addToCart(productListing)}
-          disabled={productListing.stock <= 0}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="bag-add-outline" size={16} color={productListing.stock > 0 ? "#fff" : "#9ca3af"} />
-          <Text className={`text-sm font-medium ml-1 ${productListing.stock > 0 ? 'text-white' : 'text-gray-500'}`}>
-            {cartQuantity > 0 ? `In Cart (${cartQuantity})` : "Add to Cart"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-};
 
 const CategoryProductsScreen = () => {
   const navigation = useNavigation()
