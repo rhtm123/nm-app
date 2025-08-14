@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from "react-native"
 import { useState, useEffect } from "react"
 import { useNavigation } from "@react-navigation/native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
 import LoadingSpinner from "../components/LoadingSpinner"
@@ -12,6 +13,7 @@ import { authService } from '../services/authService'
 
 const ProfileScreen = () => {
   const navigation = useNavigation()
+  const insets = useSafeAreaInsets()
   const { user, isAuthenticated, isLoading, sendOTP, verifyOTP, logout } = useAuthStore()
   const { clearCart } = useCart()
 
@@ -597,7 +599,8 @@ const ProfileScreen = () => {
         </TouchableOpacity>
       </View>
       
-      <View className="h-6" />
+      {/* Dynamic Bottom Spacing */}
+      <View style={{ height: Math.max(insets.bottom + 24, 32) }} />
     </View>
   )
   }
@@ -612,7 +615,11 @@ const ProfileScreen = () => {
 
   return (
     <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 16, 32) }}
+      >
         {isAuthenticated ? renderProfileInfo() : renderLoginForm()}
       </ScrollView>
     </View>

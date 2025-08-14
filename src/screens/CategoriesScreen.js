@@ -1,6 +1,7 @@
 import { View, Text, FlatList, TouchableOpacity, Image, RefreshControl } from "react-native"
 import { useState } from "react"
 import { useNavigation } from "@react-navigation/native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
 import LoadingSpinner from "../components/LoadingSpinner"
@@ -9,6 +10,7 @@ import { useCategories } from "../hooks/useProducts"
 
 const CategoriesScreen = () => {
   const navigation = useNavigation()
+  const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: categoriesData, loading, error, refetch } = useCategories({ page_size: 50 })
@@ -102,7 +104,10 @@ const CategoriesScreen = () => {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderCategoryItem}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ 
+          padding: 16,
+          paddingBottom: Math.max(insets.bottom + 16, 32)
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={renderEmptyState}
       />

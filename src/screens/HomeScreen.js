@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { View, Text, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions } from "react-native"
 import { useNavigation } from "@react-navigation/native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import ProductCard from "../components/ProductCard"
 import LoadingSpinner from "../components/LoadingSpinner"
@@ -47,6 +48,7 @@ const HomeCategoryCard = ({ item, navigation }) => {
 
 const HomeScreen = () => {
   const navigation = useNavigation()
+  const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch data using custom hooks
@@ -149,6 +151,7 @@ const HomeScreen = () => {
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 16, 32) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Quick Categories */}

@@ -105,38 +105,48 @@ const ProductListCard = ({ productListing, onPress, className = "" }) => {
       </View>
 
       {/* Product Info */}
-      <View className="flex-1">
-        {/* Brand */}
-        {productListing.brand && (
-          <Text style={{ color: colors.text.secondary }} className="text-xs mb-1 uppercase font-medium" numberOfLines={1}>
-            {productListing.brand.name}
+      <View className="flex-1" style={{ minHeight: 120 }}>
+        {/* Brand - Fixed height container */}
+        <View style={{ height: 16, marginBottom: 4 }}>
+          {productListing.brand && (
+            <Text style={{ color: colors.text.secondary }} className="text-xs uppercase font-medium" numberOfLines={1}>
+              {productListing.brand.name}
+            </Text>
+          )}
+        </View>
+
+        {/* Product Name - Fixed height container */}
+        <View style={{ height: 40, marginBottom: 4 }}>
+          <Text style={{ color: colors.text.primary }} className="text-base font-semibold leading-5" numberOfLines={2}>
+            {productListing.name}
           </Text>
-        )}
+        </View>
 
-        {/* Product Name */}
-        <Text style={{ color: colors.text.primary }} className="text-base font-semibold mb-1 leading-5" numberOfLines={2}>
-          {productListing.name}
-        </Text>
+        {/* Variant Name - Fixed height container */}
+        <View style={{ height: 20, marginBottom: 8 }}>
+          {productListing.variant_name && (
+            <Text style={{ color: colors.text.muted }} className="text-sm" numberOfLines={1}>
+              {productListing.variant_name}
+            </Text>
+          )}
+        </View>
 
-        {/* Variant Name */}
-        {productListing.variant_name && (
-          <Text style={{ color: colors.text.muted }} className="text-sm mb-2" numberOfLines={1}>
-            {productListing.variant_name}
-          </Text>
-        )}
-
-        {/* Rating */}
-        {productListing.rating > 0 && (
-          <View className="flex-row items-center mb-2">
-            <View className="flex-row items-center mr-2">
-              <StarRating rating={productListing.rating} size={12} />
-              <Text style={{ color: colors.text.secondary }} className="text-xs ml-1">({productListing.rating})</Text>
+        {/* Rating - Fixed height container to ensure consistency */}
+        <View style={{ height: 20, marginBottom: 8 }}>
+          {productListing.rating > 0 ? (
+            <View className="flex-row items-center">
+              <View className="flex-row items-center mr-2">
+                <StarRating rating={productListing.rating} size={12} />
+                <Text style={{ color: colors.text.secondary }} className="text-xs ml-1">({productListing.rating})</Text>
+              </View>
+              {productListing.review_count > 0 && (
+                <Text style={{ color: colors.text.light }} className="text-xs">{productListing.review_count}</Text>
+              )}
             </View>
-            {productListing.review_count > 0 && (
-              <Text style={{ color: colors.text.light }} className="text-xs">{productListing.review_count}</Text>
-            )}
-          </View>
-        )}
+          ) : (
+            <View />
+          )}
+        </View>
 
         {/* Price Row */}
         <View className="flex-row items-center justify-between mb-2">

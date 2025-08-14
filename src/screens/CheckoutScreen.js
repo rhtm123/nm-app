@@ -592,7 +592,7 @@ const CheckoutScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ 
           padding: 16,
-          paddingBottom: bottomPadding + 10 // Minimal extra padding
+          paddingBottom: bottomPadding + 32 // Increased padding for better button visibility
         }}
       >
         {renderDeliveryAddress()}

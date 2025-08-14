@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Image, Alert, Modal, TextInput, RefreshControl } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import LoadingSpinner from '../components/LoadingSpinner'
 import apiClient from '../config/apiClient'
@@ -14,6 +15,7 @@ const OrderDetailsScreen = () => {
   const route = useRoute()
   const { orderId } = route.params
   const { user } = useAuthStore()
+  const insets = useSafeAreaInsets()
 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -337,6 +339,7 @@ const OrderDetailsScreen = () => {
       <ScrollView 
         className="flex-1" 
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 48, 64) }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

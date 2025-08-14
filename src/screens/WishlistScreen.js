@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useWishlistStore from '../stores/wishlistStore';
 import useAuthStore from '../stores/authStore';
 import { useCart } from '../context/CartContext';
@@ -11,6 +12,7 @@ import { colors } from '../theme';
 
 const WishlistScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { wishlistItems, isLoading, fetchWishlistItems, removeFromWishlist, clearAllWishlistItems } = useWishlistStore();
   const { user, isAuthenticated } = useAuthStore();
   const { addToCart, getCartItemQuantity } = useCart();
@@ -161,7 +163,11 @@ const WishlistScreen = () => {
         renderItem={renderWishlistItem}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
-        contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 8 }}
+        contentContainerStyle={{ 
+          paddingVertical: 16, 
+          paddingHorizontal: 8,
+          paddingBottom: Math.max(insets.bottom + 16, 32)
+        }}
         showsVerticalScrollIndicator={false}
       />
     </View>

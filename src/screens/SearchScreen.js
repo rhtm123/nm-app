@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, Keyboard } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import ProductCard from '../components/ProductCard'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -11,6 +12,7 @@ import { colors } from '../theme'
 const SearchScreen = () => {
   const navigation = useNavigation()
   const route = useRoute()
+  const insets = useSafeAreaInsets()
   const searchInputRef = useRef(null)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -268,6 +270,7 @@ const SearchScreen = () => {
                 </View>
               )}
               numColumns={2}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 16, 32) }}
               ListHeaderComponent={() => (
                 searchResults.totalProducts > 0 ? (
                   <Text className="text-lg font-semibold text-gray-900 p-4">

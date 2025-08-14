@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import useAuthStore from '../stores/authStore';
 import orderService from '../services/orderService';
@@ -9,6 +10,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 const OrdersScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -203,7 +205,10 @@ const OrdersScreen = () => {
         data={orders}
         keyExtractor={item => item.id.toString()}
         renderItem={renderOrder}
-        contentContainerStyle={{ paddingVertical: 16 }}
+        contentContainerStyle={{ 
+          paddingVertical: 16,
+          paddingBottom: Math.max(insets.bottom + 16, 32)
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import useAuthStore from '../stores/authStore';
 import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LoadingSpinner from '../components/LoadingSpinner';
 import apiClient from '../config/apiClient';
@@ -10,6 +11,7 @@ import { colors, spacing, typography } from '../theme';
 
 const AddressesScreen = () => {
   const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -517,8 +519,8 @@ const AddressesScreen = () => {
         )}
       </View>
       
-      {/* Bottom Spacing */}
-      <View style={{ height: spacing.xl }} />
+      {/* Dynamic Bottom Spacing for Safe Area */}
+      <View style={{ height: Math.max(insets.bottom + 48, 64) }} />
     </ScrollView>
   );
 };
