@@ -21,6 +21,8 @@ export const API_ENDPOINTS = {
     CATEGORY_BY_SLUG: (slug) => `/api/product/categories/slug/${slug}/`,
     CATEGORY_PARENTS_CHILDREN: (id) => `/api/product/categories/parents-children/${id}/`,
     SIDEBAR_FILTERS: "/api/product/sidebar-filters/",
+    PRODUCT_LISTING_IMAGES: "/api/product/product-listing-images/",
+    FEATURES: "/api/product/features/",
   
     // Search
     SEARCH_PRODUCTS: "/api/search/products",

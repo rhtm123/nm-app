@@ -12,12 +12,26 @@ import { API_ENDPOINTS } from '../config/endpoints';
 import CouponSection from '../components/checkout/CouponSection'
 import AvailableOffers from '../components/checkout/AvailableOffers'
 import phonepeService from '../services/phonepeService'
+import { colors } from '../theme'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CheckoutScreen = () => {
   const navigation = useNavigation()
   const { cartItems, getCartTotal, clearCart, getCartSavings } = useCart()
   const { user, isAuthenticated, checkAuthStatus } = useAuthStore()
   const { appliedCoupon, appliedOffer, getTotalDiscount, clearAll } = useOffersStore()
+  const { bottom } = useSafeAreaInsets()
+  
+  // Calculate bottom padding - minimal approach
+  const bottomTabHeight = 60 // Bottom navigation height
+  const bottomPadding = Math.max(bottom, 10) + bottomTabHeight // Minimal but safe padding
+  
+  // Debug logging
+  console.log('CheckoutScreen Bottom Padding:', {
+    safeAreaBottom: bottom,
+    bottomTabHeight,
+    totalBottomPadding: bottomPadding
+  })
   
   // Redirect to login if not logged in
   if (!isAuthenticated || !user) {
@@ -132,7 +146,50 @@ const CheckoutScreen = () => {
     }
   };
 
+  const validateAuthentication = async () => {
+    try {
+      // Check if token exists in AsyncStorage
+      const token = await AsyncStorage.getItem("authToken")
+      if (!token) {
+        console.log('No auth token found in AsyncStorage')
+        return false
+      }
+      
+      // Check auth status in store
+      if (!isAuthenticated || !user) {
+        console.log('User not authenticated in store')
+        // Try to refresh auth status
+        await checkAuthStatus()
+        
+        // Check again after refresh
+        if (!isAuthenticated || !user) {
+          console.log('Still not authenticated after refresh')
+          return false
+        }
+      }
+      
+      // Test token by making a simple API call
+      try {
+        const testResponse = await apiClient.get(`${API_ENDPOINTS.USERS}?id=${user.id}&page_size=1`)
+        console.log('Token validation successful')
+        return true
+      } catch (tokenError) {
+        console.log('Token validation failed:', tokenError.response?.status)
+        if (tokenError.response?.status === 401) {
+          return false
+        }
+        // If it's not a 401, assume token is valid but there's another issue
+        return true
+      }
+    } catch (error) {
+      console.error('Error validating authentication:', error)
+      return false
+    }
+  }
+
   const handlePlaceOrder = async () => {
+    console.log('Starting order placement process...')
+    
     if (!selectedAddress) {
       Alert.alert("Error", "Please select a delivery address")
       return
@@ -153,8 +210,9 @@ const CheckoutScreen = () => {
       return
     }
 
-    // Check authentication status before placing order
-    if (!isAuthenticated || !user) {
+    // Validate authentication more thoroughly
+    const isAuthValid = await validateAuthentication()
+    if (!isAuthValid) {
       Alert.alert("Authentication Required", "Please login to place order", [
         { text: "Cancel", style: "cancel" },
         { text: "Login", onPress: () => navigation.navigate('Profile') },
@@ -171,6 +229,11 @@ const CheckoutScreen = () => {
     setLoading(true)
 
     try {
+      // Double-check auth token before making the API call
+      const token = await AsyncStorage.getItem("authToken")
+      console.log('Auth token exists:', !!token)
+      console.log('User object:', user)
+      
       console.log('Placing order with data:', {
         user_id: user?.id,
         estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 1,
@@ -269,12 +332,25 @@ const CheckoutScreen = () => {
       }
     } catch (error) {
       console.error('Error placing order:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
       let errorMessage = "Error placing order: Please try again";
       
       if (error.response?.status === 401) {
+        console.log('401 Unauthorized - clearing auth data');
+        // Clear authentication data
+        await AsyncStorage.removeItem("authToken")
+        await AsyncStorage.removeItem("user")
+        
+        // Update auth store
+        checkAuthStatus()
+        
         errorMessage = "Authentication failed. Please login again.";
-        // Redirect to login
-        navigation.navigate('Profile');
+        Alert.alert("Authentication Failed", errorMessage, [
+          { text: "OK", onPress: () => navigation.navigate('Profile') }
+        ]);
+        return;
       } else if (error.response?.status === 500) {
         errorMessage = "Server error. Please try again later or contact support.";
         // Show retry option for server errors
@@ -439,8 +515,8 @@ const CheckoutScreen = () => {
           </TouchableOpacity>
         ))
       )}
-      <TouchableOpacity onPress={() => navigation.navigate('Addresses')} className="mt-2 text-blue-600 text-sm">
-        <Text>Manage Addresses</Text>
+      <TouchableOpacity onPress={() => navigation.navigate('Addresses')} className="mt-2">
+        <Text className="text-blue-600 text-sm">Manage Addresses</Text>
       </TouchableOpacity>
     </View>
   )
@@ -509,8 +585,16 @@ const CheckoutScreen = () => {
   )
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
+      {/* Scrollable content area with dynamic padding */}
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ 
+          padding: 16,
+          paddingBottom: bottomPadding + 10 // Minimal extra padding
+        }}
+      >
         {renderDeliveryAddress()}
         {renderOffersAndCoupons()}
         {renderPaymentMethod()}
@@ -518,31 +602,62 @@ const CheckoutScreen = () => {
         {renderTermsAndConditions()}
       </ScrollView>
 
-      {/* Place Order Button */}
-      <View className="bg-white p-4 border-t border-gray-200">
-        <View className="mb-3">
-          <Text className="text-lg font-bold text-gray-900 text-center">Total: ₹{finalTotal}</Text>
-          {(savings + totalDiscount) > 0 && (
-            <Text className="text-sm text-green-600 text-center mt-1">
-              You save ₹{savings + totalDiscount}
-            </Text>
-          )}
-        </View>
+      {/* Fixed Bottom Section - stick to bottom */}
+      <View 
+        style={{ 
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.primary,
+          paddingBottom: Math.max(bottom, 10), // Only safe area padding, no extra
+        }}
+      >
+        {/* Compact Total Summary */}
+        {/* <View className="px-4 py-2 border-b border-gray-100">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-sm text-gray-600">Total ({cartItems.length} items)</Text>
+              {(savings + totalDiscount) > 0 && (
+                <Text className="text-xs text-green-600">
+                  You save ₹{savings + totalDiscount}
+                </Text>
+              )}
+            </View>
+            <Text className="text-lg font-bold text-gray-900">₹{finalTotal}</Text>
+          </View>
+        </View> */}
 
-        <TouchableOpacity
-          className={`flex-row items-center justify-center p-4 rounded-lg ${loading ? 'bg-gray-300' : 'bg-blue-600'}`}
-          onPress={handlePlaceOrder}
-          disabled={loading}
-        >
-          {loading ? (
-            <LoadingSpinner size="small" color="#ffffff" />
-          ) : (
-            <>
-              <Text className="text-lg font-semibold text-white">Place Order</Text>
-              <Ionicons name="arrow-forward" size={20} color="#ffffff" />
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Place Order Button */}
+        <View className="px-4 py-3">
+          <TouchableOpacity
+            style={{
+              backgroundColor: loading ? colors.gray[300] : colors.primary,
+              shadowColor: loading ? 'transparent' : colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: loading ? 0 : 8
+            }}
+            className="flex-row items-center justify-center py-4 rounded-2xl"
+            onPress={handlePlaceOrder}
+            disabled={loading}
+            activeOpacity={0.9}
+          >
+            {loading ? (
+              <LoadingSpinner size="small" color={colors.text.white} />
+            ) : (
+              <>
+                <Text style={{ color: colors.text.white }} className="text-lg font-bold mr-2">Place Order</Text>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} className="w-8 h-8 rounded-full items-center justify-center">
+                  <Ionicons name="arrow-forward" size={18} color={colors.text.white} />
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   )

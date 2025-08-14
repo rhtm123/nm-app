@@ -5,9 +5,12 @@ import Ionicons from "react-native-vector-icons/Ionicons"
 import useAuthStore from "../stores/authStore"
 import { colors } from "../theme"
 
-const Header = ({ title, showBack = false, showSearch = true, route }) => {
+const Header = ({ title, showBack = false, showSearch = true, route, options }) => {
   const navigation = useNavigation()
   const { user } = useAuthStore()
+  
+  // Get title from navigation options or fallback
+  const headerTitle = options?.title || title || (route?.name === 'Checkout' ? 'Checkout' : route?.name === 'Search' ? 'Search Products' : 'Naigaon Market')
   
   // Auto-detect if we should show back button based on route
   const shouldShowBack = showBack || (route && route.name !== 'MainTabs')
@@ -26,7 +29,7 @@ const Header = ({ title, showBack = false, showSearch = true, route }) => {
             </TouchableOpacity>
             <View className="flex-1">
               <Text className="text-lg font-bold text-gray-900">
-                {title || "Search Products"}
+                {headerTitle}
               </Text>
             </View>
           </View>
@@ -37,9 +40,11 @@ const Header = ({ title, showBack = false, showSearch = true, route }) => {
             </View>
             <View>
               <Text className="text-lg font-bold text-gray-900">
-                {title || "Naigaon Market"}
+                {route && route.name !== 'MainTabs' ? headerTitle : (title || "Naigaon Market")}
               </Text>
-              <Text className="text-xs text-gray-500">Delivering groceries in minutes</Text>
+              {(!route || route.name === 'MainTabs') && (
+                <Text className="text-xs text-gray-500">Delivering groceries in minutes</Text>
+              )}
             </View>
           </View>
         )}

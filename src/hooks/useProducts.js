@@ -107,3 +107,11 @@ export const useSearchProducts = (searchQuery, params = {}) => {
 
   return { products, loading, error, searchProducts }
 }
+
+export const useProductListingImages = (productListingId) => {
+  return useApi(() => productService.getProductListingImages(productListingId), productListingId, [productListingId])
+}
+
+export const useProductFeatures = (productListingId) => {
+  return useApi(() => productService.getProductFeatures(productListingId), productListingId, [productListingId])
+}

@@ -3,11 +3,11 @@
 export const LightTheme = {
   dark: false,
   colors: {
-    primary: '#6200ee',
+    primary: '#2563eb',
     background: '#ffffff',
-    card: '#f5f5f5',
-    text: '#000000',
-    border: '#cccccc',
+    card: '#ffffff',
+    text: '#1f2937',
+    border: '#e5e7eb',
     notification: '#ff80ab',
   },
   fonts: {

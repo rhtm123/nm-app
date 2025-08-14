@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { View, Text, FlatList, TouchableOpacity, Image, Alert } from "react-native"
+import { View, Text, FlatList, TouchableOpacity, Image, Alert, SafeAreaView } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
@@ -9,7 +9,9 @@ import useOffersStore from "../stores/offersStore"
 import LoadingSpinner from "../components/LoadingSpinner"
 import CouponSection from '../components/checkout/CouponSection'
 import AvailableOffers from '../components/checkout/AvailableOffers'
+import QuantityControls from '../components/ui/QuantityControls'
 import { colors } from '../theme'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CartScreen = () => {
   const navigation = useNavigation()
@@ -25,6 +27,18 @@ const CartScreen = () => {
     getCartSavings,
   } = useCart()
   const { getTotalDiscount, clearAll } = useOffersStore()
+  const { bottom } = useSafeAreaInsets()
+  
+  // Calculate dynamic bottom padding
+  const bottomTabHeight = 60 // Bottom navigation height
+  const bottomPadding = bottom + bottomTabHeight + 16 // Safe area + tabs + buffer
+  
+  // Debug logging
+  console.log('CartScreen Bottom Padding:', {
+    safeAreaBottom: bottom,
+    bottomTabHeight,
+    totalBottomPadding: bottomPadding
+  })
 
   const [updatingItems, setUpdatingItems] = useState({})
 
@@ -152,7 +166,6 @@ const CartScreen = () => {
               </View>
               
               <TouchableOpacity 
-                className="flex-row items-center" 
                 onPress={() => handleRemoveItem(item.id)}
                 style={{ backgroundColor: colors.error + '10' }}
                 className="flex-row items-center px-3 py-2 rounded-lg"
@@ -189,7 +202,7 @@ const CartScreen = () => {
     const totalSavings = savings + totalDiscount
     
     return (
-      <View style={{ backgroundColor: colors.surface }} className="mx-4 mb-4 p-5 rounded-2xl shadow-lg">
+      <View style={{ backgroundColor: colors.surface }} className="mx-4 mb-2 p-2 rounded-2xl shadow-lg">
         <Text style={{ color: colors.text.primary }} className="text-lg font-bold mb-4">Bill Details</Text>
         
         <View className="space-y-3">
@@ -260,15 +273,15 @@ const CartScreen = () => {
 
   if (cartItems.length === 0) {
     return (
-      <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
+      <SafeAreaView style={{ backgroundColor: colors.backgroundSecondary, flex: 1 }}>
         <Header navigation={navigation} title="Shopping Cart" showSearch={false} />
         {renderEmptyCart()}
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
+    <SafeAreaView style={{ backgroundColor: colors.backgroundSecondary, flex: 1 }}>
       <Header navigation={navigation} title="Shopping Cart" showSearch={false} />
       <View style={{ backgroundColor: colors.surface, borderBottomColor: colors.border.primary }} className="flex-row justify-between items-center px-4 py-2 border-b">
         <Text style={{ color: colors.text.secondary }} className="text-base">{getCartItemsCount()} items in cart</Text>
@@ -276,43 +289,68 @@ const CartScreen = () => {
           <Text style={{ color: colors.error }} className="text-base font-medium">Clear All</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={cartItems}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderCartItem}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16 }}
-        ListFooterComponent={() => (
-          <View className="mt-4">
-            <AvailableOffers />
-            <CouponSection />
-          </View>
-        )}
-      />
-      {renderCartSummary()}
-      <View style={{ backgroundColor: colors.surface }} className="px-4 py-6">
-        <TouchableOpacity 
-          style={{ 
-            backgroundColor: colors.primary,
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8
-          }} 
-          className="flex-row items-center justify-center py-4 rounded-2xl" 
-          onPress={handleCheckout}
-          activeOpacity={0.9}
-        >
-          <Text style={{ color: colors.text.white }} className="text-lg font-bold mr-2">
-            Proceed to Checkout
-          </Text>
-          <View style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} className="w-8 h-8 rounded-full items-center justify-center">
-            <Ionicons name="arrow-forward" size={18} color={colors.text.white} />
-          </View>
-        </TouchableOpacity>
+      
+      {/* Scrollable content area with proper flex management */}
+      <View className="flex-1" style={{ paddingBottom: bottomPadding + 300 }}> {/* Dynamic padding based on device navigation */}
+        <FlatList
+          data={cartItems}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderCartItem}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ 
+            padding: 16,
+            paddingBottom: 20 // Reduced padding
+          }}
+          ListFooterComponent={() => (
+            <View className="mt-4">
+              <AvailableOffers />
+              <CouponSection />
+            </View>
+          )}
+        />
       </View>
-    </View>
+      
+      {/* Fixed bottom section - Compact design */}
+      <View 
+        style={{ 
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.primary,
+          paddingBottom: bottomPadding, // Dynamic padding based on device navigation
+        }}
+      >
+        {/* Single row with total and checkout button */}
+        {renderCartSummary()}
+        
+        {/* Checkout Button - Full width */}
+        <View className="px-4 pb-2">
+          <TouchableOpacity 
+            style={{ 
+              backgroundColor: colors.primary,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8
+            }} 
+            className="flex-row items-center justify-center py-4 rounded-2xl" 
+            onPress={handleCheckout}
+            activeOpacity={0.9}
+          >
+            <Text style={{ color: colors.text.white }} className="text-lg font-bold mr-2">
+              Proceed to Checkout
+            </Text>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} className="w-8 h-8 rounded-full items-center justify-center">
+              <Ionicons name="arrow-forward" size={18} color={colors.text.white} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
   )
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import AuthStack from './AuthStack';
-import AppDrawer from './AppDrawer';
+import AppStack from './AppStack';
 import useAuthStore from '../stores/authStore';
 import { colors } from '../theme';
 
@@ -16,7 +16,7 @@ const RootNavigator = () => {
     );
   }
 
-  return isAuthenticated ? <AppDrawer /> : <AuthStack onLogin={() => {}} />;
+  return isAuthenticated ? <AppStack /> : <AuthStack onLogin={() => {}} />;
 };
 
 export default RootNavigator;

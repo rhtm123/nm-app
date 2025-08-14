@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary app colors -->
+    <color name="primary">#2563eb</color>
+    <color name="primary_dark">#1d4ed8</color>
+    
+    <!-- Background colors -->
+    <color name="white">#ffffff</color>
+    <color name="background_secondary">#f8fafc</color>
+    <color name="light_gray">#e5e7eb</color>
+    
+    <!-- Status and navigation bar colors -->
+    <color name="status_bar">#ffffff</color>
+    <color name="navigation_bar">#ffffff</color>
+    
+    <!-- Text colors -->
+    <color name="text_primary">#1f2937</color>
+    <color name="text_secondary">#6b7280</color>
+</resources>

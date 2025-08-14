@@ -37,12 +37,27 @@ apiClient.interceptors.response.use(
     return response
   },
   async (error) => {
+    console.log('API Error Response:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers
+      }
+    })
+    
     if (error.response?.status === 401) {
-      // Token expired, clear storage and redirect to login
+      console.log('401 Unauthorized - clearing auth tokens')
+      // Token expired, clear storage
       await AsyncStorage.removeItem("authToken")
       await AsyncStorage.removeItem("user")
-      // You can add navigation logic here
+      
+      // You can add additional logic here like updating auth store
+      // or triggering a re-login flow
     }
+    
     return Promise.reject(error)
   },
 )

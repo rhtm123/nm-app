@@ -3,10 +3,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ProfileScreen from '../screens/ProfileScreen';
 import Header from '../components/Header';
 import OrdersScreen from '../screens/OrdersScreen';
-import OrderDetailScreen from '../screens/OrderDetailScreen';
-import AddressesScreen from '../screens/AddressesScreen'; // <-- Import
-import WishlistScreen from '../screens/WishlistScreen';   // <-- Import
-import SupportScreen from '../screens/SupportScreen';     // <-- Import
+import OrderDetailsScreen from '../screens/OrderDetailsScreen';
+import AddressesScreen from '../screens/AddressesScreen';
+import WishlistScreen from '../screens/WishlistScreen';
+import SupportScreen from '../screens/SupportScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,8 +29,8 @@ const ProfileStack = () => {
         options={{ title: 'My Orders' }}
       />
       <Stack.Screen 
-        name="OrderDetail" 
-        component={OrderDetailScreen} 
+        name="OrderDetails" 
+        component={OrderDetailsScreen} 
         options={{ title: 'Order Details' }}
       />
       <Stack.Screen 

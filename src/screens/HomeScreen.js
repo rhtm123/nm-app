@@ -1,10 +1,11 @@
+import React, { useState } from "react"
 import { View, Text, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions } from "react-native"
-import { useState } from "react"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import ProductCard from "../components/ProductCard"
 import LoadingSpinner from "../components/LoadingSpinner"
 import ErrorMessage from "../components/ErrorMessage"
+import HeroCarousel from "../components/HeroCarousel"
 import { useProductListings, useCategories, useFeaturedProducts } from "../hooks/useProducts"
 import Header from '../components/Header';
 import { useCart } from '../context/CartContext';
@@ -42,80 +43,6 @@ const HomeCategoryCard = ({ item, navigation }) => {
   );
 };
 
-// Simple Hero Carousel
-const HeroCarousel = ({ featuredProducts, navigation }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const renderHeroItem = ({ item }) => (
-    <View style={{ width }} className="px-4">
-      <TouchableOpacity
-        onPress={() => navigation.navigate('ProductDetail', { productListing: item })}
-        className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden items-center"
-        activeOpacity={0.95}
-      >
-        {/* Product Image */}
-        <View className="w-full items-center pt-6 pb-2 bg-white">
-          {item.main_image || item.thumbnail ? (
-            <Image
-              source={{ uri: item.main_image || item.thumbnail }}
-              className="w-32 h-32"
-              resizeMode="contain"
-            />
-          ) : (
-            <View className="w-32 h-32 bg-gray-200 items-center justify-center">
-              <Ionicons name="image-outline" size={48} color="#9ca3af" />
-            </View>
-          )}
-        </View>
-        {/* Product Info */}
-        <View className="p-4 w-full items-center bg-blue-600 ">
-          <Text className="text-lg font-bold text-white mb-1 text-center">{item.name}</Text>
-          <Text className="text-xs text-gray-200 mb-2 text-center">{item.brand?.name}</Text>
-          <View className="flex-row items-center justify-center mb-2">
-            <Text className="text-xl font-bold text-green-300 mr-2">₹{item.price}</Text>
-            {item.mrp && item.mrp > item.price && (
-              <Text className="text-sm text-gray-400 line-through">₹{item.mrp}</Text>
-            )}
-          </View>
-          <TouchableOpacity className="bg-white px-6 py-2 rounded-full mt-2" activeOpacity={0.8}>
-            <Text className="text-blue-800 font-bold">Shop Now</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderDots = () => (
-    <View className="flex-row justify-center items-center mt-4">
-      {featuredProducts.map((_, index) => (
-        <View
-          key={index}
-          className={`h-2 rounded-full mx-1 ${
-            index === currentIndex ? 'bg-blue-600 w-6' : 'bg-gray-300 w-2'
-          }`}
-        />
-      ))}
-    </View>
-  );
-
-  return (
-    <View className="mb-6">
-      <FlatList
-        data={featuredProducts}
-        renderItem={renderHeroItem}
-        keyExtractor={(item) => item.id.toString()}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(event.nativeEvent.contentOffset.x / width);
-          setCurrentIndex(index);
-        }}
-      />
-      {renderDots()}
-    </View>
-  );
-};
 
 
 const HomeScreen = () => {
@@ -153,25 +80,25 @@ const HomeScreen = () => {
       id: 1,
       title: "Hariyali Teej",
       subtitle: "Celebrate with us",
-      color: "bg-green-500",
+      backgroundColor: colors.success,
       icon: "flower"
     },
     {
       id: 2,
       title: "MEGA SALE",
       subtitle: "Up to 50% off",
-      color: "bg-red-500",
+      backgroundColor: colors.error,
       icon: "flash"
     }
   ];
 
   const quickCategories = [
-    { name: "Deals", icon: "pricetag", color: "bg-red-500" },
-    { name: "Flash", icon: "flash", color: "bg-yellow-500" },
-    { name: "Moments", icon: "heart", color: "bg-pink-500" },
-    { name: "Beauty", icon: "sparkles", color: "bg-purple-500" },
-    { name: "Moms", icon: "people", color: "bg-blue-500" },
-    { name: "Gifts", icon: "gift", color: "bg-green-500" }
+    { name: "Deals", icon: "pricetag", backgroundColor: colors.error },
+    { name: "Flash", icon: "flash", backgroundColor: colors.warning },
+    { name: "Moments", icon: "heart", backgroundColor: "#ec4899" },
+    { name: "Beauty", icon: "sparkles", backgroundColor: "#8b5cf6" },
+    { name: "Moms", icon: "people", backgroundColor: colors.primary },
+    { name: "Gifts", icon: "gift", backgroundColor: colors.success }
   ];
 
   if (productsLoading || categoriesLoading) {
@@ -193,26 +120,29 @@ const HomeScreen = () => {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ backgroundColor: colors.backgroundSecondary }} className="flex-1">
       <DeepLinkHandler />
       <Header title="Naigaon Market" navigation={navigation} showSearch={true} />
       
       {/* Search Bar and Location */}
-      <View className="bg-white px-4 py-3 shadow-sm">
+      <View style={{ backgroundColor: colors.surface }} className="px-4 py-3 shadow-sm">
         <TouchableOpacity 
-          className="flex-row items-center bg-blue-50 rounded-xl px-4 py-3 mb-3 border border-blue-100"
+          style={{ backgroundColor: colors.infoLight, borderColor: colors.info }}
+          className="flex-row items-center rounded-xl px-4 py-3 mb-3 border"
           onPress={() => navigation.navigate('Search')}
         >
-          <Ionicons name="search" size={20} color="#2563eb" />
-          <Text className="text-blue-600 ml-3 flex-1">Search "milk" "bread" "eggs"</Text>
-          <Ionicons name="chevron-forward" size={16} color="#2563eb" />
+          <Ionicons name="search" size={20} color={colors.primary} />
+          <Text style={{ color: colors.primary }} className="ml-3 flex-1">Search "milk" "bread" "eggs"</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
         </TouchableOpacity>
         
         <TouchableOpacity className="flex-row items-center">
-          <Ionicons name="location" size={18} color="#16a34a" />
-          <Text className="text-sm font-semibold text-gray-900 ml-2">Deliver to Home</Text>
-          <Text className="text-xs text-gray-500 ml-1">• Naigaon, Maharashtra 401208</Text>
-          <Ionicons name="chevron-down" size={16} color="#6b7280" className="ml-auto" />
+          <Ionicons name="location" size={18} color={colors.success} />
+          <View className="flex-1 ml-2">
+            <Text style={{ color: colors.text.primary }} className="text-sm font-semibold">Deliver to Home</Text>
+            <Text style={{ color: colors.text.secondary }} className="text-xs">• Naigaon, Maharashtra 401208</Text>
+          </View>
+          <Ionicons name="chevron-down" size={16} color={colors.text.secondary} />
         </TouchableOpacity>
       </View>
       
@@ -230,10 +160,13 @@ const HomeScreen = () => {
             keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
               <TouchableOpacity className="items-center mr-6">
-                <View className={`w-12 h-12 ${item.color} rounded-xl items-center justify-center mb-2`}>
-                  <Ionicons name={item.icon} size={20} color="white" />
+                <View 
+                  style={{ backgroundColor: item.backgroundColor }}
+                  className="w-12 h-12 rounded-xl items-center justify-center mb-2"
+                >
+                  <Ionicons name={item.icon} size={20} color={colors.text.white} />
                 </View>
-                <Text className="text-xs font-semibold text-gray-800">{item.name}</Text>
+                <Text style={{ color: colors.text.primary }} className="text-xs font-semibold">{item.name}</Text>
               </TouchableOpacity>
             )}
           />
@@ -242,8 +175,11 @@ const HomeScreen = () => {
         {/* Hero Carousel */}
         {featuredProducts && featuredProducts.length > 0 && (
           <View className="mb-6">
-            <Text className="text-xl font-bold text-gray-900 px-4 mb-4">Featured Products</Text>
-            <HeroCarousel featuredProducts={featuredProducts} navigation={navigation} />
+            <Text style={{ color: colors.text.primary }} className="text-xl font-bold px-4 mb-4">Featured Products</Text>
+            <HeroCarousel 
+              products={featuredProducts} 
+              onProductPress={(item) => navigation.navigate('ProductDetail', { productListing: item })} 
+            />
           </View>
         )}
 
@@ -256,17 +192,18 @@ const HomeScreen = () => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity 
-                className={`w-72 h-32 rounded-2xl mr-4 p-4 justify-between ${item.color}`}
+                style={{ backgroundColor: item.backgroundColor }}
+                className="w-72 h-32 rounded-2xl mr-4 p-4 justify-between"
               >
                 <View>
-                  <Text className="text-white text-xl font-bold mb-1">{item.title}</Text>
-                  <Text className="text-white text-base">{item.subtitle}</Text>
+                  <Text style={{ color: colors.text.white }} className="text-xl font-bold mb-1">{item.title}</Text>
+                  <Text style={{ color: colors.text.white }} className="text-base">{item.subtitle}</Text>
                 </View>
                 <View className="flex-row items-center justify-between">
-                  <TouchableOpacity className="bg-white px-4 py-2 rounded-full">
-                    <Text className="text-gray-800 font-bold">Shop Now</Text>
+                  <TouchableOpacity style={{ backgroundColor: colors.surface }} className="px-4 py-2 rounded-full">
+                    <Text style={{ color: colors.text.primary }} className="font-bold">Shop Now</Text>
                   </TouchableOpacity>
-                  <Ionicons name={item.icon} size={32} color="white" />
+                  <Ionicons name={item.icon} size={32} color={colors.text.white} />
                 </View>
               </TouchableOpacity>
             )}
@@ -277,9 +214,9 @@ const HomeScreen = () => {
         {categories && categories.length > 0 && (
           <View className="mb-6">
             <View className="flex-row items-center justify-between px-4 mb-4">
-              <Text className="text-xl font-bold text-gray-900">Categories</Text>
+              <Text style={{ color: colors.text.primary }} className="text-xl font-bold">Categories</Text>
           <TouchableOpacity>
-                <Text className="text-blue-600 font-semibold">See All</Text>
+                <Text style={{ color: colors.primary }} className="font-semibold">See All</Text>
           </TouchableOpacity>
         </View>
         <FlatList
@@ -313,9 +250,9 @@ const HomeScreen = () => {
         {products && products.length > 0 && (
           <View className="mb-6">
             <View className="flex-row items-center justify-between px-4 mb-4">
-              <Text className="text-xl font-bold text-gray-900">Previously Bought</Text>
+              <Text style={{ color: colors.text.primary }} className="text-xl font-bold">Previously Bought</Text>
               <TouchableOpacity>
-                <Text className="text-blue-600 font-semibold">See All</Text>
+                <Text style={{ color: colors.primary }} className="font-semibold">See All</Text>
               </TouchableOpacity>
             </View>
       <FlatList
@@ -331,17 +268,17 @@ const HomeScreen = () => {
 
         {/* Mega Sale Banner */}
         <View className="mx-4 mb-6">
-          <View className="bg-blue-600 rounded-2xl p-6">
+          <View style={{ backgroundColor: colors.primary }} className="rounded-2xl p-6">
             <View className="flex-row items-center justify-between">
               <View className="flex-1">
                 <Text className="text-white text-2xl font-bold mb-2">MEGA CLEANING SALE</Text>
                 <Text className="text-white text-lg mb-4">Powered by top brands</Text>
-                <TouchableOpacity className="bg-white px-6 py-3 rounded-full self-start">
-                  <Text className="text-blue-600 font-bold">Shop Now</Text>
+                <TouchableOpacity style={{ backgroundColor: colors.surface }} className="px-6 py-3 rounded-full self-start">
+                  <Text style={{ color: colors.primary }} className="font-bold">Shop Now</Text>
         </TouchableOpacity>
       </View>
-              <View className="w-20 h-20 bg-white rounded-full items-center justify-center">
-                <Ionicons name="sparkles" size={32} color="#2563eb" />
+              <View style={{ backgroundColor: colors.surface }} className="w-20 h-20 rounded-full items-center justify-center">
+                <Ionicons name="sparkles" size={32} color={colors.primary} />
     </View>
             </View>
           </View>
@@ -350,16 +287,17 @@ const HomeScreen = () => {
         {/* Category Grid */}
         {categories && categories.length > 0 && (
           <View className="mb-6">
-            <Text className="text-xl font-bold text-gray-900 px-4 mb-4">Shop by Category</Text>
+            <Text style={{ color: colors.text.primary }} className="text-xl font-bold px-4 mb-4">Shop by Category</Text>
             <View className="px-4">
               <View className="flex-row flex-wrap justify-between">
                 {categories.slice(0, 8).map((category, index) => (
                   <TouchableOpacity 
                     key={category.id}
                     onPress={() => navigation.navigate('CategoryProducts', { category })}
-                    className="w-[48%] bg-white rounded-2xl p-4 mb-4 shadow-lg border border-gray-200"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.border.primary }}
+                    className="w-[48%] rounded-2xl p-4 mb-4 shadow-lg border"
                   >
-                    <View className="w-12 h-12 bg-blue-100 rounded-xl items-center justify-center mb-3">
+                    <View style={{ backgroundColor: colors.infoLight }} className="w-12 h-12 rounded-xl items-center justify-center mb-3">
                       {category.image ? (
                         <Image 
                           source={{ uri: category.image }} 
@@ -367,12 +305,12 @@ const HomeScreen = () => {
                           resizeMode="cover"
                         />
                       ) : (
-                        <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center">
-                          <Ionicons name="cube" size={16} color="white" />
+                        <View style={{ backgroundColor: colors.primary }} className="w-8 h-8 rounded-lg items-center justify-center">
+                          <Ionicons name="cube" size={16} color={colors.text.white} />
         </View>
                       )}
       </View>
-                    <Text className="text-sm font-semibold text-gray-900" numberOfLines={2}>
+                    <Text style={{ color: colors.text.primary }} className="text-sm font-semibold" numberOfLines={2}>
                       {category.name}
                     </Text>
           </TouchableOpacity>
@@ -385,7 +323,7 @@ const HomeScreen = () => {
         {/* More Products */}
         {products && products.length > 0 && (
           <View className="mb-6">
-            <Text className="text-xl font-bold text-gray-900 px-4 mb-4">Trending Now</Text>
+            <Text style={{ color: colors.text.primary }} className="text-xl font-bold px-4 mb-4">Trending Now</Text>
         <FlatList
           data={products.slice(0, 6)}
           horizontal

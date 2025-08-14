@@ -4,7 +4,6 @@ import { API_ENDPOINTS } from "../config/endpoints"
 export const productService = {
   // Get Product Listings (Main function - this is what we use everywhere)
   getProductListings: async (params = {}) => {
-    console.log('API CALL: getProductListings', params);
     try {
       // Always filter for approved products and add estore_id
       const defaultParams = {
@@ -24,7 +23,6 @@ export const productService = {
 
   // Get Featured Product Listings
   getFeaturedProductListings: async (params = {}) => {
-    console.log('API CALL: getFeaturedProductListings');
     try {
       const defaultParams = {
         approved: true,
@@ -43,7 +41,6 @@ export const productService = {
 
   // Get Product Listing by ID
   getProductListingById: async (listingId) => {
-    console.log('API CALL: getProductListingById', listingId);
     try {
       const response = await apiClient.get(API_ENDPOINTS.PRODUCT_LISTING_BY_ID(listingId))
       return { success: true, data: response.data }
@@ -64,7 +61,6 @@ export const productService = {
 
   // Get Product Variants (All listings for a specific product_id)
   getProductVariants: async (productId) => {
-    console.log('API CALL: getProductVariants', productId);
     try {
       const response = await apiClient.get(API_ENDPOINTS.PRODUCT_LISTINGS, {
         params: {
@@ -82,7 +78,6 @@ export const productService = {
 
   // Get Product Details (Base product info)
   getProductById: async (productId) => {
-    console.log('API CALL: getProductById', productId);
     try {
       const response = await apiClient.get(API_ENDPOINTS.PRODUCT_BY_ID(productId))
       return { success: true, data: response.data }
@@ -93,7 +88,6 @@ export const productService = {
 
   // Get Related Products
   getRelatedProducts: async (listingId, params = {}) => {
-    console.log('API CALL: getRelatedProducts', listingId, params);
     try {
       const response = await apiClient.get(API_ENDPOINTS.RELATED_PRODUCTS(listingId), { params })
       return { success: true, data: response.data }
@@ -104,7 +98,6 @@ export const productService = {
 
   // Get Categories
   getCategories: async (params = {}) => {
-    console.log('API CALL: getCategories', params);
     try {
       const defaultParams = {
         page_size: 50,
@@ -119,7 +112,6 @@ export const productService = {
 
   // Get Products by Category
   getProductsByCategory: async (categoryId, params = {}) => {
-    console.log('API CALL: getProductsByCategory', categoryId, params);
     try {
       const defaultParams = {
         category_id: categoryId,
@@ -158,7 +150,6 @@ export const productService = {
 
   // Search Products
   searchProducts: async (searchQuery, params = {}) => {
-    console.log('API CALL: searchProducts', searchQuery, params);
     try {
       const defaultParams = {
         search: searchQuery,
@@ -173,6 +164,38 @@ export const productService = {
       return { success: true, data: response.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || "Failed to search products" }
+    }
+  },
+
+  // Get Product Listing Images
+  getProductListingImages: async (productListingId, params = {}) => {
+    try {
+      const defaultParams = {
+        product_listing_id: productListingId,
+        page_size: 20,
+        ...params,
+      }
+
+      const response = await apiClient.get(API_ENDPOINTS.PRODUCT_LISTING_IMAGES, { params: defaultParams })
+      return { success: true, data: response.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || "Failed to fetch product images" }
+    }
+  },
+
+  // Get Product Features
+  getProductFeatures: async (productListingId, params = {}) => {
+    try {
+      const defaultParams = {
+        product_listing_id: productListingId,
+        page_size: 50,
+        ...params,
+      }
+
+      const response = await apiClient.get(API_ENDPOINTS.FEATURES, { params: defaultParams })
+      return { success: true, data: response.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || "Failed to fetch product features" }
     }
   },
 }

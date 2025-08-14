@@ -6,7 +6,7 @@ import useWishlistStore from '../stores/wishlistStore';
 import useAuthStore from '../stores/authStore';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import WishlistProductCard from '../components/WishlistProductCard';
+import ProductCard from '../components/ProductCard';
 import { colors } from '../theme';
 
 const WishlistScreen = () => {
@@ -67,7 +67,7 @@ const WishlistScreen = () => {
   };
 
   const navigateToProduct = (productListing) => {
-    navigation.navigate('ProductDetail', { productId: productListing.id });
+    navigation.navigate('ProductDetail', { productListing: productListing });
   };
 
   const renderWishlistItem = ({ item }) => {
@@ -75,10 +75,11 @@ const WishlistScreen = () => {
     
     return (
       <View className="flex-1 mx-1 mb-3">
-        <WishlistProductCard 
+        <ProductCard 
           productListing={productListing}
           onPress={() => navigateToProduct(productListing)}
           onRemove={handleRemoveFromWishlist}
+          isWishlistView={true}
           className=""
         />
       </View>

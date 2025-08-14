@@ -5,11 +5,14 @@ import { useCart } from "../context/CartContext"
 import useWishlistStore from "../stores/wishlistStore"
 import useAuthStore from "../stores/authStore"
 import { colors } from "../theme"
+import StarRating from "./ui/StarRating"
+import DiscountBadge from "./ui/DiscountBadge"
+import QuantityControls from "./ui/QuantityControls"
 
 const { width } = Dimensions.get("window")
 const cardWidth = (width - 16 * 3) / 2
 
-const ProductCard = ({ productListing, onPress, className = "", style = {}, width = null }) => {
+const ProductCard = ({ productListing, onPress, className = "", style = {}, width = null, isWishlistView = false, onRemove = null }) => {
   const { addToCart, isInCart, getCartItemQuantity, updateQuantity, removeFromCart } = useCart()
   const { isAuthenticated, user } = useAuthStore()
   
@@ -38,6 +41,12 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
 
   const handleWishlistToggle = useCallback(async (e) => {
     e.stopPropagation(); // Prevent triggering onPress of the card
+    
+    // If this is wishlist view and has onRemove, use that instead
+    if (isWishlistView && onRemove) {
+      onRemove(productListing.id);
+      return;
+    }
     
     if (!isAuthenticated || !user) {
       Alert.alert("Login Required", "Please login to add items to wishlist");
@@ -71,38 +80,8 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
       console.error('Error toggling wishlist:', error);
       Alert.alert("Error", "Failed to update wishlist");
     }
-  }, [isAuthenticated, user, wishlistLoading, productListing])
+  }, [isAuthenticated, user, wishlistLoading, productListing, isWishlistView, onRemove])
 
-  const renderStars = (rating) => {
-    const stars = []
-    const fullStars = Math.floor(rating)
-    const hasHalfStar = rating % 1 !== 0
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Ionicons key={i} name="star" size={12} color={colors.rating} />)
-    }
-
-    if (hasHalfStar) {
-      stars.push(<Ionicons key="half" name="star-half" size={12} color={colors.rating} />)
-    }
-
-    const emptyStars = 5 - Math.ceil(rating)
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Ionicons key={`empty-${i}`} name="star-outline" size={12} color={colors.text.light} />)
-    }
-
-    return stars
-  }
-
-  const calculateDiscount = () => {
-    if (productListing.mrp && productListing.price) {
-      const discount = ((productListing.mrp - productListing.price) / productListing.mrp) * 100
-      return Math.round(discount)
-    }
-    return 0
-  }
-
-  const discount = calculateDiscount()
   const inStock = productListing.stock > 0
   const cartQuantity = getCartItemQuantity(productListing.id)
 
@@ -114,11 +93,7 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
       activeOpacity={0.9}
     >
       {/* Discount Badge */}
-      {discount > 0 && (
-        <View style={{ backgroundColor: colors.orange, position: 'absolute', top: 6, left: 6, zIndex: 10 }} className="px-1.5 py-0.5 rounded">
-          <Text style={{ color: colors.text.white }} className="text-xs font-bold">{discount}% OFF</Text>
-        </View>
-      )}
+      <DiscountBadge mrp={productListing.mrp} price={productListing.price} />
 
       {/* Product Image */}
       <View style={{ backgroundColor: colors.gray[50] }} className="relative h-32">
@@ -130,17 +105,27 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
           resizeMode="contain"
         />
         
-        {/* Wishlist Heart Icon */}
+        {/* Wishlist Icon - Heart for normal view, Close for wishlist view */}
         <TouchableOpacity
-          style={{ backgroundColor: colors.surface, position: 'absolute', top: 6, right: 6 }}
-          className="rounded-full p-1.5 shadow-sm"
+          style={{ 
+            backgroundColor: isWishlistView ? colors.error : colors.surface, 
+            position: 'absolute', 
+            top: 6, 
+            right: 6,
+            borderRadius: isWishlistView ? 12 : 20,
+            width: isWishlistView ? 24 : 32,
+            height: isWishlistView ? 24 : 32,
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+          className={isWishlistView ? "" : "rounded-full p-1.5 shadow-sm"}
           onPress={handleWishlistToggle}
           activeOpacity={0.8}
         >
           <Ionicons
-            name={isProductInWishlist ? "heart" : "heart-outline"}
-            size={14}
-            color={isProductInWishlist ? colors.error : colors.text.secondary}
+            name={isWishlistView ? "close" : (isProductInWishlist ? "heart" : "heart-outline")}
+            size={isWishlistView ? 14 : 14}
+            color={isWishlistView ? "white" : (isProductInWishlist ? colors.error : colors.text.secondary)}
           />
         </TouchableOpacity>
         
@@ -176,8 +161,8 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
         {productListing.rating > 0 && (
           <View className="flex-row items-center mb-2">
             <View className="flex-row items-center mr-2">
-              <View className="flex-row mr-1">{renderStars(productListing.rating)}</View>
-              <Text style={{ color: colors.text.secondary }} className="text-xs">({productListing.rating})</Text>
+              <StarRating rating={productListing.rating} size={12} />
+              <Text style={{ color: colors.text.secondary }} className="text-xs ml-1">({productListing.rating})</Text>
             </View>
             {productListing.review_count > 0 && (
               <Text style={{ color: colors.text.light }} className="text-xs">{productListing.review_count}</Text>
