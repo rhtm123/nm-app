@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import { useCart } from "../context/CartContext"
+import useCartStore from "../stores/cartStore"
 import useAuthStore from "../stores/authStore"
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useOffersStore from "../stores/offersStore"
@@ -17,10 +17,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CheckoutScreen = () => {
   const navigation = useNavigation()
-  const { cartItems, getCartTotal, clearCart, getCartSavings } = useCart()
   const { user, isAuthenticated, checkAuthStatus } = useAuthStore()
+  
+  // Use Zustand selectors for optimal performance
+  const cartItems = useCartStore((state) => state.items)
+  const getCartTotal = useCartStore((state) => state.getCartTotal)
+  const clearCart = useCartStore((state) => state.clearCart)
+  const getCartSavings = useCartStore((state) => state.getCartSavings)
+  const initializeCart = useCartStore((state) => state.initializeCart)
+  
   const { appliedCoupon, appliedOffer, getTotalDiscount, clearAll } = useOffersStore()
   const { bottom } = useSafeAreaInsets()
+  
+  // Initialize cart on mount
+  useEffect(() => {
+    initializeCart(user?.id)
+  }, [user?.id, initializeCart])
   
   // Calculate bottom padding - minimal approach
   const bottomTabHeight = 60 // Bottom navigation height
@@ -247,7 +259,7 @@ const CheckoutScreen = () => {
       // Create order
       const orderData = {
         user_id: user?.id,
-        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 1,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         shipping_address_id: selectedAddress.id,
         offer_id: appliedOffer?.id || null,
         coupon_id: appliedCoupon?.id || null,
@@ -294,7 +306,7 @@ const CheckoutScreen = () => {
         order_id: order.id,
         amount: finalTotal,
         payment_gateway: paymentMethod === "pg" ? "PhonePe" : null,
-        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 1,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         payment_method: paymentMethod,
       };
 
@@ -311,7 +323,7 @@ const CheckoutScreen = () => {
           await handlePhonePePayment(order, payment);
         } else {
           // Cash on delivery - order completed
-          clearCart()
+          clearCart(user?.id)
           clearAll()
           Alert.alert(
             "Order Placed!",

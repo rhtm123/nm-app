@@ -8,7 +8,7 @@ import ProductCard from "../components/ProductCard"
 import LoadingSpinner from "../components/LoadingSpinner"
 import HtmlRenderer from "../components/ui/HtmlRenderer"
 import { useProductVariants, useProductDetails, useRelatedProducts, useProductListingImages, useProductFeatures } from "../hooks/useProducts"
-import { useCart } from "../context/CartContext"
+import useCartStore from "../stores/cartStore"
 import useWishlistStore from "../stores/wishlistStore"
 import useAuthStore from "../stores/authStore"
 import { colors, spacing, typography } from "../theme"
@@ -19,9 +19,20 @@ const ProductDetailScreen = () => {
   const navigation = useNavigation()
   const route = useRoute()
   const { productListing } = route.params
-  const { addToCart, isInCart, getCartItemQuantity, updateQuantity, removeFromCart } = useCart()
   const { isAuthenticated, user } = useAuthStore()
   const insets = useSafeAreaInsets()
+  
+  // Use Zustand selectors for optimal performance
+  const addToCart = useCartStore((state) => state.addToCart)
+  const getCartItemQuantity = useCartStore((state) => state.getCartItemQuantity)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const removeFromCart = useCartStore((state) => state.removeFromCart)
+  const initializeCart = useCartStore((state) => state.initializeCart)
+  
+  // Initialize cart on mount
+  useEffect(() => {
+    initializeCart(user?.id)
+  }, [user?.id, initializeCart])
 
   const [selectedVariant, setSelectedVariant] = useState(productListing)
   
@@ -65,9 +76,9 @@ const ProductDetailScreen = () => {
     return acc
   }, {})
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
     if (!selectedVariant || selectedVariant.stock <= 0) return
-    const result = await addToCart(selectedVariant, quantity)
+    const result = addToCart(selectedVariant, quantity, user?.id)
     if (result.success) {
       Alert.alert("Success", `Added ${quantity} item(s) to cart`)
     } else {
@@ -75,17 +86,16 @@ const ProductDetailScreen = () => {
     }
   }
   
-  const handleIncreaseQuantity = async () => {
-    const currentQuantity = getCartItemQuantity(selectedVariant.id)
-    const result = await addToCart(selectedVariant, 1)
+  const handleIncreaseQuantity = () => {
+    addToCart(selectedVariant, 1, user?.id)
   }
 
-  const handleDecreaseQuantity = async () => {
+  const handleDecreaseQuantity = () => {
     const currentQuantity = getCartItemQuantity(selectedVariant.id)
     if (currentQuantity > 1) {
-      await updateQuantity(selectedVariant.id, currentQuantity - 1)
+      updateQuantity(selectedVariant.id, currentQuantity - 1, user?.id)
     } else {
-      await removeFromCart(selectedVariant.id)
+      removeFromCart(selectedVariant.id, user?.id)
     }
   }
 

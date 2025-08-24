@@ -14,7 +14,6 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { LightTheme, DarkTheme } from './src/theme';
 import { StatusBar, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { CartProvider } from './src/context/CartContext';
 import useAuthStore from './src/stores/authStore';
 
 import "./global.css"; // Ensure this is imported to apply global styles
@@ -46,11 +45,9 @@ export default function App() {
         translucent={false}
       />
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-        <CartProvider>
-          <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
-            <RootNavigator />
-          </NavigationContainer>
-        </CartProvider>
+        <NavigationContainer theme={darkMode ? DarkTheme : LightTheme}>
+          <RootNavigator />
+        </NavigationContainer>
       </GestureHandlerRootView>
     </>
   );

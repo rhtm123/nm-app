@@ -6,7 +6,7 @@ import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
 import LoadingSpinner from "../components/LoadingSpinner"
 import useAuthStore from "../stores/authStore"
-import { useCart } from "../context/CartContext"
+import useCartStore from "../stores/cartStore"
 import { colors, spacing, typography } from "../theme"
 import InitialsAvatar from '../components/InitialsAvatar'
 import { authService } from '../services/authService'
@@ -15,7 +15,7 @@ const ProfileScreen = () => {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const { user, isAuthenticated, isLoading, sendOTP, verifyOTP, logout } = useAuthStore()
-  const { clearCart } = useCart()
+  const clearCart = useCartStore((state) => state.clearCart)
 
   const [showLoginForm, setShowLoginForm] = useState(false)
   const [showOTPForm, setShowOTPForm] = useState(false)
@@ -153,7 +153,7 @@ const ProfileScreen = () => {
         style: "destructive",
         onPress: async () => {
           await logout()
-          clearCart()
+          clearCart(user?.id)
           Alert.alert("Success", "Logged out successfully")
         },
       },

@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, Image, Dimensions, Alert } from "react-native"
-import { memo, useCallback } from "react"
+import { memo, useCallback, useEffect } from "react"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import { useCart } from "../context/CartContext"
+import useCartStore from "../stores/cartStore"
 import useWishlistStore from "../stores/wishlistStore"
 import useAuthStore from "../stores/authStore"
 import { colors } from "../theme"
@@ -13,8 +13,19 @@ const { width } = Dimensions.get("window")
 const cardWidth = (width - 16 * 3) / 2
 
 const ProductCard = ({ productListing, onPress, className = "", style = {}, width = null, isWishlistView = false, onRemove = null }) => {
-  const { addToCart, isInCart, getCartItemQuantity, updateQuantity, removeFromCart } = useCart()
   const { isAuthenticated, user } = useAuthStore()
+  
+  // Use Zustand selectors for optimal performance
+  const cartItemQuantity = useCartStore((state) => state.getCartItemQuantity(productListing.id))
+  const addToCart = useCartStore((state) => state.addToCart)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const removeFromCart = useCartStore((state) => state.removeFromCart)
+  const initializeCart = useCartStore((state) => state.initializeCart)
+  
+  // Initialize cart on mount
+  useEffect(() => {
+    initializeCart(user?.id)
+  }, [user?.id, initializeCart])
   
   // Use selector to properly subscribe to wishlist state changes
   const isProductInWishlist = useWishlistStore((state) => 
@@ -22,22 +33,21 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
   )
   const wishlistLoading = useWishlistStore((state) => state.isLoading)
   
-  const handleAddToCart = useCallback(async () => {
-    const result = await addToCart(productListing)
-  }, [addToCart, productListing])
+  const handleAddToCart = useCallback(() => {
+    addToCart(productListing, 1, user?.id)
+  }, [addToCart, productListing, user?.id])
 
-  const handleIncreaseQuantity = useCallback(async () => {
-    const result = await addToCart(productListing, 1)
-  }, [addToCart, productListing])
+  const handleIncreaseQuantity = useCallback(() => {
+    addToCart(productListing, 1, user?.id)
+  }, [addToCart, productListing, user?.id])
 
-  const handleDecreaseQuantity = useCallback(async () => {
-    const currentQuantity = getCartItemQuantity(productListing.id)
-    if (currentQuantity > 1) {
-      await updateQuantity(productListing.id, currentQuantity - 1)
+  const handleDecreaseQuantity = useCallback(() => {
+    if (cartItemQuantity > 1) {
+      updateQuantity(productListing.id, cartItemQuantity - 1, user?.id)
     } else {
-      await removeFromCart(productListing.id)
+      removeFromCart(productListing.id, user?.id)
     }
-  }, [getCartItemQuantity, updateQuantity, removeFromCart, productListing.id])
+  }, [cartItemQuantity, updateQuantity, removeFromCart, productListing.id, user?.id])
 
   const handleWishlistToggle = useCallback(async (e) => {
     e.stopPropagation(); // Prevent triggering onPress of the card
@@ -83,7 +93,6 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
   }, [isAuthenticated, user, wishlistLoading, productListing, isWishlistView, onRemove])
 
   const inStock = productListing.stock > 0
-  const cartQuantity = getCartItemQuantity(productListing.id)
 
   return (
     <TouchableOpacity 
@@ -194,7 +203,7 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
         </Text>
 
         {/* Add to Cart Button - Compact Blinkit Style */}
-        {cartQuantity > 0 ? (
+        {cartItemQuantity > 0 ? (
           <View className="flex-row items-center justify-between">
             {/* Decrease Button */}
             <TouchableOpacity
@@ -203,7 +212,7 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
               onPress={handleDecreaseQuantity}
               activeOpacity={0.7}
             >
-              {cartQuantity === 1 ? (
+              {cartItemQuantity === 1 ? (
                 <Ionicons name="trash-outline" size={16} color={colors.text.white} />
               ) : (
                 <Ionicons name="remove" size={16} color={colors.text.white} />
@@ -212,7 +221,7 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
             
             {/* Quantity Display - Compact */}
             <View style={{ backgroundColor: colors.surface, borderColor: colors.primary }} className="flex-1 mx-2 border rounded-lg py-1 items-center">
-              <Text style={{ color: colors.primary }} className="text-sm font-bold">{cartQuantity}</Text>
+              <Text style={{ color: colors.primary }} className="text-sm font-bold">{cartItemQuantity}</Text>
             </View>
             
             {/* Increase Button */}

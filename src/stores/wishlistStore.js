@@ -4,13 +4,112 @@ import apiClient from '../config/apiClient';
 import { API_ENDPOINTS } from '../config/endpoints';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Debounce utility for API operations
+const debounce = (func, wait) => {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
 const useWishlistStore = create(
-  subscribeWithSelector((set, get) => ({
-    // State
-    wishlistItems: [],
-    wishlistItemIds: new Set(), // Keep track of product IDs for fast lookup
-    isLoading: false,
-    wishlistId: null,
+  subscribeWithSelector((set, get) => {
+    // Debounced API operations to prevent excessive calls
+    const debouncedAddToWishlist = debounce(async (productListing, wishlistId) => {
+      try {
+        const wishlistItemData = {
+          wishlist_id: wishlistId,
+          product_listing_id: productListing.id
+        };
+        const response = await apiClient.post(API_ENDPOINTS.WISHLIST_ITEMS, wishlistItemData);
+        
+        // Update the temporary item with real server data
+        set(state => {
+          // Find the first temp item for this product and replace it
+          let tempItemReplaced = false;
+          const updatedItems = state.wishlistItems.map(item => {
+            if (item.product_listing_id === productListing.id && 
+                item.id.toString().startsWith('temp_') && !tempItemReplaced) {
+              tempItemReplaced = true;
+              return {
+                ...response.data,
+                product_listing: productListing
+              };
+            }
+            return item;
+          });
+          
+          // If no temp item was found, this might be a fresh add - ensure no duplicates
+          const hasRealItem = updatedItems.some(item => 
+            item.product_listing_id === productListing.id && 
+            !item.id.toString().startsWith('temp_')
+          );
+          
+          if (!hasRealItem && !tempItemReplaced) {
+            // Add new item if no real item exists
+            updatedItems.push({
+              ...response.data,
+              product_listing: productListing
+            });
+          }
+          
+          return {
+            wishlistItems: updatedItems
+          };
+        });
+        
+        console.log('Added to wishlist (API):', productListing.name, 'Real ID:', response.data.id);
+      } catch (error) {
+        console.error('Error adding to wishlist (API):', error);
+        // Revert optimistic update on API failure
+        set(state => {
+          const newIds = new Set(state.wishlistItemIds);
+          newIds.delete(productListing.id);
+          return {
+            wishlistItems: state.wishlistItems.filter(item => 
+              item.product_listing_id !== productListing.id
+            ),
+            wishlistItemIds: newIds
+          };
+        });
+      }
+    }, 300);
+
+    const debouncedRemoveFromWishlist = debounce(async (productListingId, wishlistItem) => {
+      try {
+        // Only make API call if item has a real server ID (not temporary)
+        if (wishlistItem.id && !wishlistItem.id.toString().startsWith('temp_')) {
+          await apiClient.delete(`${API_ENDPOINTS.WISHLIST_ITEMS}${wishlistItem.id}/`);
+          console.log('Removed from wishlist (API):', productListingId, 'ID:', wishlistItem.id);
+        } else {
+          console.log('Skipped API call for temporary item:', productListingId);
+        }
+      } catch (error) {
+        console.error('Error removing from wishlist (API):', error);
+        // Revert optimistic update on API failure
+        set(state => {
+          const newIds = new Set(state.wishlistItemIds);
+          newIds.add(productListingId);
+          return {
+            wishlistItems: [...state.wishlistItems, wishlistItem],
+            wishlistItemIds: newIds
+          };
+        });
+      }
+    }, 300);
+
+    return {
+      // State
+      wishlistItems: [],
+      wishlistItemIds: new Set(), // Keep track of product IDs for fast lookup
+      isLoading: false,
+      wishlistId: null,
+      pendingOperations: new Set(), // Track pending operations to prevent duplicates
 
   // Actions
   setLoading: (loading) => set({ isLoading: loading }),
@@ -38,7 +137,7 @@ const useWishlistStore = create(
         console.log('Creating new wishlist for user:', userId);
         const newWishlistResponse = await apiClient.post(API_ENDPOINTS.WISHLISTS, {
           user_id: userId,
-          estore_id: 1 // Use hardcoded estore_id
+          estore_id: 2 // Use hardcoded estore_id
         });
         wishlist = newWishlistResponse.data;
         console.log('Created new wishlist:', wishlist.id);
@@ -69,153 +168,159 @@ const useWishlistStore = create(
       set({ isLoading: true });
       const response = await apiClient.get(`${API_ENDPOINTS.WISHLIST_ITEMS}?wishlist_id=${wishlistId}`);
       const items = response.data.results || [];
-      const itemIds = new Set(items.map(item => item.product_listing_id).filter(id => id !== undefined && id !== null));
       
-      set({ 
-        wishlistItems: items,
-        wishlistItemIds: itemIds
+      // Deduplicate items by product_listing_id
+      const uniqueItems = [];
+      const seenIds = new Set();
+      
+      items.forEach(item => {
+        if (item.product_listing_id && !seenIds.has(item.product_listing_id)) {
+          uniqueItems.push(item);
+          seenIds.add(item.product_listing_id);
+        }
       });
       
-      // console.log('Fetched wishlist items:', items.length, 'IDs:', Array.from(itemIds));
+      const itemIds = new Set(uniqueItems.map(item => item.product_listing_id));
+      
+      set({ 
+        wishlistItems: uniqueItems,
+        wishlistItemIds: itemIds,
+        pendingOperations: new Set() // Clear pending operations on fresh fetch
+      });
+      
+      console.log('Fetched wishlist items:', uniqueItems.length, 'unique items');
     } catch (error) {
       console.error('Error fetching wishlist items:', error);
       set({ 
         wishlistItems: [],
-        wishlistItemIds: new Set()
+        wishlistItemIds: new Set(),
+        pendingOperations: new Set()
       });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  // Add item to wishlist
-  addToWishlist: async (productListing) => {
-    const { wishlistId, wishlistItems, isLoading } = get();
+  // Add item to wishlist (OPTIMISTIC UPDATE - INSTANT UI)
+  addToWishlist: (productListing) => {
+    const { wishlistId, wishlistItems, wishlistItemIds, pendingOperations } = get();
     
     if (!wishlistId) {
       return { success: false, error: 'Wishlist not initialized' };
     }
 
-    // Prevent multiple simultaneous requests
-    if (isLoading) {
-      return { success: false, error: 'Please wait...' };
+    // Prevent duplicate operations
+    const operationKey = `add_${productListing.id}`;
+    if (pendingOperations.has(operationKey)) {
+      return { success: false, error: 'Operation in progress' };
     }
 
-    // Check if item is already in wishlist (double-check to prevent race conditions)
-    const existingItem = wishlistItems.find(item => 
-      item.product_listing_id === productListing.id
-    );
-
-    if (existingItem) {
+    // Double check if item is already in wishlist (prevent duplicates)
+    const existingItem = wishlistItems.find(item => item.product_listing_id === productListing.id);
+    if (existingItem || wishlistItemIds.has(productListing.id)) {
+      console.log('Item already in wishlist:', productListing.name);
       return { success: false, error: 'Item already in wishlist' };
     }
 
-    try {
-      set({ isLoading: true });
-      
-      // Double-check after setting loading state
-      const currentState = get();
-      const stillExists = currentState.wishlistItems.find(item => 
-        item.product_listing_id === productListing.id
-      );
-      
-      if (stillExists) {
-        return { success: false, error: 'Item already in wishlist' };
+    // OPTIMISTIC UPDATE - Update UI immediately
+    const newItem = {
+      id: `temp_${Date.now()}_${productListing.id}`, // Unique temporary ID
+      product_listing_id: productListing.id,
+      product_listing: productListing,
+      wishlist_id: wishlistId
+    };
+    
+    set(state => {
+      // Final deduplication check before adding
+      const hasExisting = state.wishlistItems.some(item => item.product_listing_id === productListing.id);
+      if (hasExisting) {
+        return state; // Don't modify state if duplicate found
       }
       
-      const wishlistItemData = {
-        wishlist_id: wishlistId,
-        product_listing_id: productListing.id
+      const newIds = new Set(state.wishlistItemIds);
+      const newPendingOps = new Set(state.pendingOperations);
+      newIds.add(productListing.id);
+      newPendingOps.add(operationKey);
+      
+      return {
+        wishlistItems: [...state.wishlistItems, newItem],
+        wishlistItemIds: newIds,
+        pendingOperations: newPendingOps
       };
+    });
 
-      const response = await apiClient.post(API_ENDPOINTS.WISHLIST_ITEMS, wishlistItemData);
-      
-      // Add to local state immediately for instant UI feedback
-      const newItem = {
-        ...response.data,
-        product_listing: productListing
-      };
-      
+    // Async API call (debounced) - doesn't block UI
+    debouncedAddToWishlist(productListing, wishlistId);
+    
+    // Remove pending operation after delay
+    setTimeout(() => {
       set(state => {
-        const newIds = new Set(state.wishlistItemIds);
-        newIds.add(productListing.id);
-        return {
-          wishlistItems: [...state.wishlistItems, newItem],
-          wishlistItemIds: newIds
-        };
+        const newPendingOps = new Set(state.pendingOperations);
+        newPendingOps.delete(operationKey);
+        return { pendingOperations: newPendingOps };
       });
+    }, 500);
 
-      console.log('Added to wishlist:', productListing.name, 'ID:', productListing.id);
-      return { success: true, data: newItem };
-
-    } catch (error) {
-      console.error('Error adding to wishlist:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Failed to add to wishlist' 
-      };
-    } finally {
-      set({ isLoading: false });
-    }
+    console.log('Added to wishlist (optimistic):', productListing.name);
+    return { success: true, data: newItem };
   },
 
-  // Remove item from wishlist
-  removeFromWishlist: async (productListingId) => {
-    const { wishlistItems, isLoading } = get();
+  // Remove item from wishlist (OPTIMISTIC UPDATE - INSTANT UI)
+  removeFromWishlist: (productListingId) => {
+    const { wishlistItems, wishlistItemIds, pendingOperations } = get();
     
-    // Prevent multiple simultaneous requests
-    if (isLoading) {
-      return { success: false, error: 'Please wait...' };
+    // Prevent duplicate operations
+    const operationKey = `remove_${productListingId}`;
+    if (pendingOperations.has(operationKey)) {
+      return { success: false, error: 'Operation in progress' };
     }
     
+    // Find the wishlist item to remove (check both regular items and any with temp IDs)
     const wishlistItem = wishlistItems.find(item => 
       item.product_listing_id === productListingId
     );
 
-    if (!wishlistItem) {
+    // If item not found in wishlist items but exists in itemIds, remove it anyway (cleanup)
+    if (!wishlistItem && !wishlistItemIds.has(productListingId)) {
+      console.log('Item not found in wishlist:', productListingId);
       return { success: false, error: 'Item not found in wishlist' };
     }
 
-    try {
-      set({ isLoading: true });
+    // OPTIMISTIC UPDATE - Update UI immediately
+    set(state => {
+      const newIds = new Set(state.wishlistItemIds);
+      const newPendingOps = new Set(state.pendingOperations);
+      newIds.delete(productListingId);
+      newPendingOps.add(operationKey);
       
-      // Remove from local state immediately for instant UI feedback
-      set(state => {
-        const newIds = new Set(state.wishlistItemIds);
-        newIds.delete(productListingId);
-        return {
-          wishlistItems: state.wishlistItems.filter(item => 
-            item.product_listing_id !== productListingId
-          ),
-          wishlistItemIds: newIds
-        };
-      });
-      
-      await apiClient.delete(`${API_ENDPOINTS.WISHLIST_ITEMS}${wishlistItem.id}/`);
-      
-      console.log('Removed from wishlist:', productListingId);
-      return { success: true };
-
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      
-      // Revert the local state change if API call failed
-      set(state => {
-        const newIds = new Set(state.wishlistItemIds);
-        newIds.add(productListingId);
-        return {
-          wishlistItems: [...state.wishlistItems, wishlistItem],
-          wishlistItemIds: newIds
-        };
-      });
-      
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Failed to remove from wishlist' 
+      return {
+        wishlistItems: state.wishlistItems.filter(item => 
+          item.product_listing_id !== productListingId
+        ),
+        wishlistItemIds: newIds,
+        pendingOperations: newPendingOps
       };
-    } finally {
-      set({ isLoading: false });
+    });
+    
+    // Only make API call if item has a real server ID
+    if (wishlistItem && wishlistItem.id && !wishlistItem.id.toString().startsWith('temp_')) {
+      // Async API call (debounced) - doesn't block UI
+      debouncedRemoveFromWishlist(productListingId, wishlistItem);
+    } else {
+      console.log('Skipped API call for item that was never saved to server:', productListingId);
     }
+    
+    // Remove pending operation after delay
+    setTimeout(() => {
+      set(state => {
+        const newPendingOps = new Set(state.pendingOperations);
+        newPendingOps.delete(operationKey);
+        return { pendingOperations: newPendingOps };
+      });
+    }, 500);
+    
+    console.log('Removed from wishlist (optimistic):', productListingId);
+    return { success: true };
   },
 
   // Check if item is in wishlist
@@ -263,15 +368,21 @@ const useWishlistStore = create(
       // Clear local state immediately for instant UI feedback
       set({ 
         wishlistItems: [], 
-        wishlistItemIds: new Set()
+        wishlistItemIds: new Set(),
+        pendingOperations: new Set() // Clear pending operations too
       });
       
-      // Delete all items from server
-      const deletePromises = originalItems.map(item => 
-        apiClient.delete(`${API_ENDPOINTS.WISHLIST_ITEMS}${item.id}/`)
+      // Delete only items with real server IDs
+      const realItems = originalItems.filter(item => 
+        item.id && !item.id.toString().startsWith('temp_')
       );
       
-      await Promise.all(deletePromises);
+      if (realItems.length > 0) {
+        const deletePromises = realItems.map(item => 
+          apiClient.delete(`${API_ENDPOINTS.WISHLIST_ITEMS}${item.id}/`)
+        );
+        await Promise.all(deletePromises);
+      }
       
       console.log('Cleared all wishlist items');
       return { success: true, message: 'All items removed from wishlist' };
@@ -294,8 +405,8 @@ const useWishlistStore = create(
     }
   },
 
-  // Toggle wishlist item
-  toggleWishlist: async (productListing) => {
+  // Toggle wishlist item (INSTANT UI RESPONSE)
+  toggleWishlist: (productListing) => {
     const { isInWishlist, addToWishlist, removeFromWishlist, wishlistId } = get();
     
     // Check if wishlist is initialized
@@ -304,9 +415,9 @@ const useWishlistStore = create(
     }
     
     if (isInWishlist(productListing.id)) {
-      return await removeFromWishlist(productListing.id);
+      return removeFromWishlist(productListing.id);
     } else {
-      return await addToWishlist(productListing);
+      return addToWishlist(productListing);
     }
   },
 
@@ -320,7 +431,36 @@ const useWishlistStore = create(
     }
     
     return { success: true, wishlistId };
+  },
+
+  // Force sync with server (for manual refresh)
+  syncWithServer: async () => {
+    const { wishlistId } = get();
+    if (!wishlistId) return;
+    
+    try {
+      set({ isLoading: true });
+      const response = await apiClient.get(`${API_ENDPOINTS.WISHLIST_ITEMS}?wishlist_id=${wishlistId}`);
+      const items = response.data.results || [];
+      const itemIds = new Set(items.map(item => item.product_listing_id).filter(id => id !== undefined && id !== null));
+      
+      set({ 
+        wishlistItems: items,
+        wishlistItemIds: itemIds,
+        pendingOperations: new Set() // Clear pending operations on sync
+      });
+      
+      console.log('Synced wishlist with server:', items.length, 'items');
+      return { success: true };
+    } catch (error) {
+      console.error('Error syncing wishlist:', error);
+      return { success: false, error: error.message };
+    } finally {
+      set({ isLoading: false });
+    }
   }
-})))
+    };
+  })
+)
 
 export default useWishlistStore;

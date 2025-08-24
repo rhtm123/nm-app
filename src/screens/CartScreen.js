@@ -1,9 +1,9 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { View, Text, FlatList, TouchableOpacity, Image, Alert, SafeAreaView } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
-import { useCart } from "../context/CartContext"
+import useCartStore from "../stores/cartStore"
 import useAuthStore from "../stores/authStore"
 import useOffersStore from "../stores/offersStore"
 import LoadingSpinner from "../components/LoadingSpinner"
@@ -16,18 +16,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 const CartScreen = () => {
   const navigation = useNavigation()
   const { user } = useAuthStore()
-  const {
-    cartItems,
-    loading,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getCartTotal,
-    getCartItemsCount,
-    getCartSavings,
-  } = useCart()
+  
+  // Use Zustand selectors for optimal performance
+  const cartItems = useCartStore((state) => state.items)
+  const loading = useCartStore((state) => state.loading)
+  const removeFromCart = useCartStore((state) => state.removeFromCart)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const clearCart = useCartStore((state) => state.clearCart)
+  const getCartTotal = useCartStore((state) => state.getCartTotal)
+  const getCartItemsCount = useCartStore((state) => state.getCartItemsCount)
+  const getCartSavings = useCartStore((state) => state.getCartSavings)
+  const initializeCart = useCartStore((state) => state.initializeCart)
+  
   const { getTotalDiscount, clearAll } = useOffersStore()
   const { bottom } = useSafeAreaInsets()
+  
+  // Initialize cart on mount
+  useEffect(() => {
+    initializeCart(user?.id)
+  }, [user?.id, initializeCart])
   
   // Calculate dynamic bottom padding
   const bottomTabHeight = 60 // Bottom navigation height
@@ -40,22 +47,19 @@ const CartScreen = () => {
     totalBottomPadding: bottomPadding
   })
 
-  const [updatingItems, setUpdatingItems] = useState({})
-
-  const handleQuantityChange = async (itemId, newQuantity) => {
+  const handleQuantityChange = (itemId, newQuantity) => {
     if (newQuantity < 1) {
       handleRemoveItem(itemId)
       return
     }
-    setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
-    await updateQuantity(itemId, newQuantity)
-    setUpdatingItems((prev) => ({ ...prev, [itemId]: false }))
+    // Optimistic update - no need for loading states with Zustand
+    updateQuantity(itemId, newQuantity, user?.id)
   }
 
   const handleRemoveItem = (itemId) => {
     Alert.alert("Remove Item", "Are you sure you want to remove this item from your cart?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => removeFromCart(itemId) },
+      { text: "Remove", style: "destructive", onPress: () => removeFromCart(itemId, user?.id) },
     ])
   }
 
@@ -63,7 +67,7 @@ const CartScreen = () => {
     Alert.alert("Clear Cart", "Are you sure you want to remove all items from your cart?", [
       { text: "Cancel", style: "cancel" },
       { text: "Clear All", style: "destructive", onPress: () => {
-        clearCart()
+        clearCart(user?.id)
         clearAll()
       }},
     ])
@@ -81,7 +85,6 @@ const CartScreen = () => {
   }
 
   const renderCartItem = ({ item }) => {
-    const isUpdating = updatingItems[item.id]
     const maxQuantity = Math.min(item.buy_limit || 10, item.stock)
     const discountPercent = item.mrp && item.mrp > item.price ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0
     
@@ -132,12 +135,12 @@ const CartScreen = () => {
               <View style={{ backgroundColor: colors.gray[50] }} className="flex-row items-center rounded-xl p-1">
                 <TouchableOpacity 
                   style={{
-                    backgroundColor: item.quantity <= 1 || isUpdating ? colors.gray[200] : colors.primary,
-                    opacity: item.quantity <= 1 || isUpdating ? 0.5 : 1
+                    backgroundColor: item.quantity <= 1 ? colors.gray[200] : colors.primary,
+                    opacity: item.quantity <= 1 ? 0.5 : 1
                   }}
                   className="w-9 h-9 rounded-lg items-center justify-center"
                   onPress={() => handleQuantityChange(item.id, item.quantity - 1)} 
-                  disabled={item.quantity <= 1 || isUpdating}
+                  disabled={item.quantity <= 1}
                   activeOpacity={0.7}
                 >
                   {item.quantity === 1 ? (
@@ -153,12 +156,12 @@ const CartScreen = () => {
                 
                 <TouchableOpacity 
                   style={{
-                    backgroundColor: item.quantity >= maxQuantity || isUpdating ? colors.gray[200] : colors.primary,
-                    opacity: item.quantity >= maxQuantity || isUpdating ? 0.5 : 1
+                    backgroundColor: item.quantity >= maxQuantity ? colors.gray[200] : colors.primary,
+                    opacity: item.quantity >= maxQuantity ? 0.5 : 1
                   }}
                   className="w-9 h-9 rounded-lg items-center justify-center"
                   onPress={() => handleQuantityChange(item.id, item.quantity + 1)} 
-                  disabled={item.quantity >= maxQuantity || isUpdating}
+                  disabled={item.quantity >= maxQuantity}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="add" size={14} color={colors.text.white} />

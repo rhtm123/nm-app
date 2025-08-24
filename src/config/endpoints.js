@@ -72,6 +72,9 @@ export const API_ENDPOINTS = {
     ADDRESSES: "/api/location/addresses/",
     ADDRESS_BY_ID: (id) => `/api/location/addresses/${id}/`,
   
+    // Delivery
+    DELIVERY_PINS: "/api/estore/delivery-pins/",
+  
     // Blogs
     BLOGS: "/api/blog/blogs",
     BLOG_BY_ID: (id) => `/api/blog/blogs/${id}`,

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native'
-import { useCart } from '../../context/CartContext'
+import useCartStore from '../../stores/cartStore'
 import useOffersStore from '../../stores/offersStore'
 import { offerApi } from '../../services/offerApi'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 
 const AvailableOffers = () => {
-  const { cartItems, getCartTotal } = useCart()
+  const cartItems = useCartStore((state) => state.items)
+  const getCartTotal = useCartStore((state) => state.getCartTotal)
   const { appliedOffer, setAppliedOffer, removeAppliedOffer, appliedCoupon } = useOffersStore()
   const [loading, setLoading] = useState(false)
   const [availableOffers, setAvailableOffers] = useState([])

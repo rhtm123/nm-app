@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useWishlistStore from '../stores/wishlistStore';
 import useAuthStore from '../stores/authStore';
-import { useCart } from '../context/CartContext';
+import useCartStore from '../stores/cartStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProductCard from '../components/ProductCard';
 import { colors } from '../theme';
@@ -15,7 +15,8 @@ const WishlistScreen = () => {
   const insets = useSafeAreaInsets();
   const { wishlistItems, isLoading, fetchWishlistItems, removeFromWishlist, clearAllWishlistItems } = useWishlistStore();
   const { user, isAuthenticated } = useAuthStore();
-  const { addToCart, getCartItemQuantity } = useCart();
+  const addToCart = useCartStore((state) => state.addToCart);
+  const getCartItemQuantity = useCartStore((state) => state.getCartItemQuantity);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -25,7 +26,7 @@ const WishlistScreen = () => {
 
   const handleAddToCart = async (productListing) => {
     try {
-      const result = await addToCart(productListing);
+      const result = addToCart(productListing, 1, user?.id);
       if (result.success) {
         // Remove from wishlist after adding to cart
         await removeFromWishlist(productListing.id);

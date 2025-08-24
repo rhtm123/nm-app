@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { View, Text, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions } from "react-native"
+import React, { useState, useEffect } from "react"
+import { View, Text, ScrollView, FlatList, TouchableOpacity, RefreshControl, Image, Dimensions, AppState } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Ionicons from "react-native-vector-icons/Ionicons"
@@ -7,14 +7,16 @@ import ProductCard from "../components/ProductCard"
 import LoadingSpinner from "../components/LoadingSpinner"
 import ErrorMessage from "../components/ErrorMessage"
 import HeroCarousel from "../components/HeroCarousel"
+import AddressSelectionModal from "../components/AddressSelectionModal"
 import { useProductListings, useCategories, useFeaturedProducts } from "../hooks/useProducts"
 import Header from '../components/Header';
-import { useCart } from '../context/CartContext';
+import useAuthStore from '../stores/authStore';
 import DeepLinkHandler from '../components/DeepLinkHandler';
 import { colors } from '../theme';
+import locationService from '../services/locationService';
 
 
-const { width } = Dimensions.get("window")
+// const { width } = Dimensions.get("window")
 
 
 // Simple Category Card
@@ -49,7 +51,11 @@ const HomeCategoryCard = ({ item, navigation }) => {
 const HomeScreen = () => {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
+  const { user } = useAuthStore()
   const [refreshing, setRefreshing] = useState(false)
+  const [deliveryStatus, setDeliveryStatus] = useState(null)
+  const [loadingLocation, setLoadingLocation] = useState(false)
+  const [showAddressModal, setShowAddressModal] = useState(false)
 
   // Fetch data using custom hooks
   const {
@@ -65,14 +71,48 @@ const HomeScreen = () => {
     refetch: refetchCategories,
   } = useCategories({ page_size: 10 })
   
-  const { featuredProducts, loading: featuredLoading, error: featuredError } = useFeaturedProducts()
+  const { featuredProducts, loading: _featuredLoading, error: featuredError } = useFeaturedProducts()
 
   const products = productsData?.results || []
   const categories = categoriesData?.results || []
 
+  // Load delivery status on component mount and when app becomes active
+  useEffect(() => {
+    loadDeliveryStatus()
+    
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        loadDeliveryStatus()
+      }
+    }
+    
+    const subscription = AppState.addEventListener('change', handleAppStateChange)
+    return () => subscription?.remove()
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadDeliveryStatus = async () => {
+    try {
+      setLoadingLocation(true)
+      const status = await locationService.getDeliveryStatus(user?.id)
+      setDeliveryStatus(status)
+    } catch (error) {
+      console.error('Failed to load delivery status:', error)
+    } finally {
+      setLoadingLocation(false)
+    }
+  }
+
+  const handleAddressSelected = (newDeliveryStatus) => {
+    setDeliveryStatus(newDeliveryStatus)
+  }
+
   const onRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([refetchProducts(), refetchCategories()])
+    await Promise.all([
+      refetchProducts(), 
+      refetchCategories(),
+      loadDeliveryStatus()
+    ])
     setRefreshing(false)
   }
 
@@ -138,11 +178,34 @@ const HomeScreen = () => {
           <Ionicons name="chevron-forward" size={16} color={colors.primary} />
         </TouchableOpacity>
         
-        <TouchableOpacity className="flex-row items-center">
-          <Ionicons name="location" size={18} color={colors.success} />
+        <TouchableOpacity 
+          className="flex-row items-center"
+          onPress={() => setShowAddressModal(true)}
+        >
+          <Ionicons 
+            name="location" 
+            size={18} 
+            color={deliveryStatus?.isAvailable ? colors.success : colors.error} 
+          />
           <View className="flex-1 ml-2">
-            <Text style={{ color: colors.text.primary }} className="text-sm font-semibold">Deliver to Home</Text>
-            <Text style={{ color: colors.text.secondary }} className="text-xs">• Naigaon, Maharashtra 401208</Text>
+            <Text style={{ color: colors.text.primary }} className="text-sm font-semibold">
+              Deliver to {deliveryStatus?.isAvailable ? 'Home' : 'Location'}
+            </Text>
+            {loadingLocation ? (
+              <View className="flex-row items-center">
+                <Text style={{ color: colors.text.secondary }} className="text-xs mr-1">• Checking location...</Text>
+              </View>
+            ) : deliveryStatus ? (
+              <Text style={{ color: colors.text.secondary }} className="text-xs">
+                • {deliveryStatus.city}, {deliveryStatus.state}
+                {deliveryStatus.pincode && ` - ${deliveryStatus.pincode}`}
+                {!deliveryStatus.isAvailable && " (Not serviceable)"}
+              </Text>
+            ) : (
+              <Text style={{ color: colors.text.secondary }} className="text-xs">
+                • Tap to set delivery location
+              </Text>
+            )}
           </View>
           <Ionicons name="chevron-down" size={16} color={colors.text.secondary} />
         </TouchableOpacity>
@@ -341,6 +404,14 @@ const HomeScreen = () => {
         {/* Bottom Spacing */}
         <View className="h-20" />
       </ScrollView>
+      
+      {/* Address Selection Modal */}
+      <AddressSelectionModal
+        visible={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+        onAddressSelected={handleAddressSelected}
+        currentAddress={deliveryStatus}
+      />
     </View>
   )
 }

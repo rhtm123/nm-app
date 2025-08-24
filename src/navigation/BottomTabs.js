@@ -7,14 +7,13 @@ import CategoriesScreen from '../screens/CategoriesScreen';
 import CartScreen from '../screens/CartScreen';
 import ProfileStack from '../navigation/ProfileStack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useCart } from '../context/CartContext';
+import useCartStore from '../stores/cartStore';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
 const CartTabIcon = ({ color, size }) => {
-  const { getCartItemsCount } = useCart();
-  const cartCount = getCartItemsCount();
+  const cartCount = useCartStore((state) => state.getCartItemsCount());
 
   return (
     <View>

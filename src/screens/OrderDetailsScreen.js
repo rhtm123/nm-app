@@ -99,7 +99,7 @@ const OrderDetailsScreen = () => {
       const paymentData = {
         order_id: order.id,
         amount: order.total_amount,
-        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 1,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         payment_method: "pg"
       }
 
