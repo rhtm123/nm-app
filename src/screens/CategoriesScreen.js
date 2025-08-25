@@ -1,21 +1,37 @@
-import { View, Text, FlatList, TouchableOpacity, Image, RefreshControl } from "react-native"
-import { useState } from "react"
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, Animated } from "react-native"
+import { useState, useMemo } from "react"
 import { useNavigation } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Ionicons from "react-native-vector-icons/Ionicons"
-import Header from "../components/Header"
+import CategoryHeader from "../components/CategoryHeader"
+import CategoryCard from "../components/CategoryCard"
+import CategorySearch from "../components/CategorySearch"
+import ViewToggle from "../components/ViewToggle"
 import LoadingSpinner from "../components/LoadingSpinner"
 import ErrorMessage from "../components/ErrorMessage"
 import { useCategories } from "../hooks/useProducts"
+import { colors } from "../theme"
 
 const CategoriesScreen = () => {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
+  const [viewMode, setViewMode] = useState('list') // 'list' or 'grid'
+  const [searchQuery, setSearchQuery] = useState('')
+  const scrollY = new Animated.Value(0)
 
   const { data: categoriesData, loading, error, refetch } = useCategories({ page_size: 50 })
 
   const categories = categoriesData?.results || []
+
+  // Filter categories based on search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories
+    return categories.filter(category => 
+      category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [categories, searchQuery])
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -27,60 +43,60 @@ const CategoriesScreen = () => {
     navigation.navigate('CategoryProducts', { category })
   }
 
-  const renderCategoryItem = ({ item }) => (
-    <TouchableOpacity 
-      className="flex-row bg-white rounded-2xl mb-4 p-4 shadow-lg shadow-gray-300/50 border border-gray-100" 
-      onPress={() => handleCategoryPress(item)} 
-      activeOpacity={0.8}
-    >
-      <View className="mr-4">
-        {item.image ? (
-          <Image 
-            source={{ uri: item.image }} 
-            className="w-20 h-20 rounded-xl bg-gray-50"
+  const handleSearch = (query) => {
+    setSearchQuery(query)
+  }
+
+  const handleViewChange = (newViewMode) => {
+    setViewMode(newViewMode)
+  }
+
+  const renderCategoryItem = ({ item, index }) => {
+    return (
+      <CategoryCard
+        item={item}
+        onPress={handleCategoryPress}
+        variant={viewMode}
+        showProductCount={false}
+      />
+    )
+  }
+
+  const renderEmptyState = () => {
+    const isSearching = searchQuery.trim().length > 0
+    return (
+      <View className="flex-1 justify-center items-center p-8 mt-20">
+        <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-6">
+          <Ionicons 
+            name={isSearching ? "search-outline" : "grid-outline"} 
+            size={40} 
+            color={colors.gray[400]} 
           />
-        ) : (
-          <View className="w-20 h-20 rounded-xl bg-gray-50 items-center justify-center">
-            <Ionicons name="grid-outline" size={32} color="#9ca3af" />
-          </View>
-        )}
-      </View>
-
-      <View className="flex-1 justify-between">
-        <Text className="text-lg font-bold text-gray-800 mb-1 leading-6" numberOfLines={2}>
-          {item.name}
-        </Text>
-
-        {item.description && (
-          <Text className="text-sm text-gray-600 leading-5 mb-3" numberOfLines={3}>
-            {item.description}
-          </Text>
-        )}
-
-        <View className="flex-row justify-between items-center">
-          <View className="bg-gray-100 px-3 py-1 rounded-full">
-            <Text className="text-xs text-gray-600 font-medium">Level {item.level}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
         </View>
+        <Text className="text-xl font-bold text-gray-800 mb-2">
+          {isSearching ? 'No Results Found' : 'No Categories Available'}
+        </Text>
+        <Text className="text-gray-600 text-center leading-6">
+          {isSearching 
+            ? `No categories match "${searchQuery}"\nTry a different search term`
+            : 'Categories will appear here when available'}
+        </Text>
+        {isSearching && (
+          <TouchableOpacity
+            onPress={() => setSearchQuery('')}
+            className="mt-4 bg-blue-50 px-6 py-3 rounded-2xl"
+          >
+            <Text className="text-blue-600 font-semibold">Clear Search</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    </TouchableOpacity>
-  )
-
-  const renderEmptyState = () => (
-    <View className="flex-1 justify-center items-center p-8">
-      <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-4">
-        <Ionicons name="grid-outline" size={32} color="#9ca3af" />
-      </View>
-      <Text className="text-xl font-bold text-gray-800 mb-2">No Categories Found</Text>
-      <Text className="text-gray-600 text-center">Categories will appear here when available</Text>
-    </View>
-  )
+    )
+  }
 
   if (loading && !refreshing) {
     return (
-      <View className="flex-1 bg-gray-50">
-        <Header navigation={navigation} title="Categories" />
+      <View className="flex-1" style={{ backgroundColor: colors.backgroundSecondary }}>
+        <CategoryHeader navigation={navigation} title="Categories" totalCount={0} />
         <LoadingSpinner />
       </View>
     )
@@ -88,29 +104,65 @@ const CategoriesScreen = () => {
 
   if (error) {
     return (
-      <View className="flex-1 bg-gray-50">
-        <Header navigation={navigation} title="Categories" />
+      <View className="flex-1" style={{ backgroundColor: colors.backgroundSecondary }}>
+        <CategoryHeader navigation={navigation} title="Categories" totalCount={0} />
         <ErrorMessage message={error} onRetry={refetch} />
       </View>
     )
   }
 
-  return (
-    <View className="flex-1 bg-gray-50">
-      <Header navigation={navigation} title="Categories" />
+  const numColumns = viewMode === 'grid' ? 2 : 1
+  const key = `${viewMode}-${numColumns}`
 
-      <FlatList
-        data={categories}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderCategoryItem}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ 
-          padding: 16,
-          paddingBottom: Math.max(insets.bottom + 16, 32)
-        }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListEmptyComponent={renderEmptyState}
+  return (
+    <View className="flex-1 bg-white">
+      <CategoryHeader 
+        navigation={navigation} 
+        title="Categories" 
+        totalCount={categories.length}
       />
+      
+      {/* Search and Controls */}
+      <View className="bg-white">
+        <CategorySearch 
+          onSearch={handleSearch} 
+          showViewToggle={true}
+          currentView={viewMode}
+          onViewChange={handleViewChange}
+        />
+      </View>
+
+      {/* Categories List/Grid */}
+      <View className="flex-1" style={{ backgroundColor: colors.gray[50] }}>
+        <Animated.FlatList
+          key={key}
+          data={filteredCategories}
+          keyExtractor={(item) => `${viewMode}-${item.id}`}
+          renderItem={renderCategoryItem}
+          numColumns={numColumns}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ 
+            paddingTop: 16,
+            paddingHorizontal: viewMode === 'grid' ? 16 : 0,
+            paddingBottom: Math.max(insets.bottom + 80, 100), // Increased padding for bottom tab bar
+            ...(filteredCategories.length === 0 && { flexGrow: 1 })
+          }}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+        />
+      </View>
     </View>
   )
 }

@@ -100,6 +100,9 @@ export const productService = {
   getCategories: async (params = {}) => {
     try {
       const defaultParams = {
+        estore_id: 2,
+        category_type: 'product',
+        has_blogs: false,
         page_size: 50,
         ...params,
       }

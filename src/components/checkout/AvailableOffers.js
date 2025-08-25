@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
 import useCartStore from '../../stores/cartStore'
 import useOffersStore from '../../stores/offersStore'
 import { offerApi } from '../../services/offerApi'
+import useAlert from '../../hooks/useAlert'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 
 const AvailableOffers = () => {
@@ -12,6 +13,7 @@ const AvailableOffers = () => {
   const [loading, setLoading] = useState(false)
   const [availableOffers, setAvailableOffers] = useState([])
   const [isExpanded, setIsExpanded] = useState(false)
+  const { alert, showError, showSuccess, showInfo, hideAlert } = useAlert()
 
   const cartTotal = getCartTotal()
 
@@ -19,7 +21,7 @@ const AvailableOffers = () => {
     if (cartItems.length > 0) {
       loadAvailableOffers()
     }
-  }, [cartItems])
+  }, [cartItems.length])
 
   const loadAvailableOffers = async () => {
     setLoading(true)
@@ -34,7 +36,7 @@ const AvailableOffers = () => {
       )
       setAvailableOffers(filteredOffers)
     } catch (error) {
-      Alert.alert('Error', 'Failed to load offers')
+      showError('Failed to load offers')
     } finally {
       setLoading(false)
     }
@@ -42,13 +44,13 @@ const AvailableOffers = () => {
 
   const applyOffer = async (offer) => {
     if (appliedCoupon) {
-      Alert.alert('Error', 'Please remove the applied coupon before applying an offer')
+      showError('Please remove the applied coupon before applying an offer')
       return
     }
     setLoading(true)
     try {
       if (!cartItems || cartItems.length === 0) {
-        Alert.alert('Error', 'Your cart is empty')
+        showError('Your cart is empty')
         return
       }
       const productIds = cartItems.map(item => item.id)
@@ -64,14 +66,14 @@ const AvailableOffers = () => {
           discount_amount: Math.round(parseFloat(validation.discount_amount)) || 0
         }
         setAppliedOffer(offerData)
-        Alert.alert('Success', 'Offer applied successfully')
+        showSuccess('Offer applied successfully')
         setAvailableOffers(prev => prev.filter(o => o.id !== offer.id))
         setIsExpanded(false)
       } else {
-        Alert.alert('Error', validation?.message || 'Offer cannot be applied')
+        showError(validation?.message || 'Offer cannot be applied')
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to apply offer. Please try again.')
+      showError('Failed to apply offer. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -80,7 +82,7 @@ const AvailableOffers = () => {
   const removeOffer = (offer) => {
     removeAppliedOffer()
     setAvailableOffers(prev => [...prev, offer])
-    Alert.alert('Info', 'Offer removed')
+    showInfo('Offer removed')
   }
 
   const formatDiscount = (offer) => {

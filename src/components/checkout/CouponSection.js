@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity } from 'react-native'
 import useCartStore from '../../stores/cartStore'
 import useOffersStore from '../../stores/offersStore'
 import { offerApi } from '../../services/offerApi'
+import useAlert from '../../hooks/useAlert'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 
 const CouponSection = () => {
@@ -11,12 +12,13 @@ const CouponSection = () => {
   const [couponCode, setCouponCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [showCouponInput, setShowCouponInput] = useState(false)
+  const { alert, showError, showSuccess, showInfo, hideAlert } = useAlert()
 
   const cartTotal = getCartTotal()
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
-      Alert.alert('Error', 'Please enter a coupon code')
+      showError('Please enter a coupon code')
       return
     }
     setLoading(true)
@@ -32,15 +34,15 @@ const CouponSection = () => {
           discount_value: validation.discount_value,
           discount: Math.round(parseFloat(validation.discount_amount)) || 0
         })
-        Alert.alert('Success', 'Coupon applied successfully')
+        showSuccess('Coupon applied successfully')
         setShowCouponInput(false)
         setCouponCode('')
       } else {
-        Alert.alert('Error', validation?.message || 'Invalid coupon code')
+        showError(validation?.message || 'Invalid coupon code')
         setCouponCode('')
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to validate coupon. Please try again.')
+      showError('Failed to validate coupon. Please try again.')
       setCouponCode('')
     } finally {
       setLoading(false)
@@ -49,7 +51,7 @@ const CouponSection = () => {
 
   const removeCoupon = () => {
     removeAppliedCoupon()
-    Alert.alert('Info', 'Coupon removed')
+    showInfo('Offer removed')
   }
 
   if (appliedCoupon) {
@@ -108,4 +110,4 @@ const CouponSection = () => {
   )
 }
 
-export default CouponSection 
+export default CouponSection

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { View, Text, FlatList, TouchableOpacity, Image, Alert, SafeAreaView } from "react-native"
+import { View, Text, FlatList, TouchableOpacity, Image, SafeAreaView } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import Header from "../components/Header"
@@ -10,12 +10,15 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import CouponSection from '../components/checkout/CouponSection'
 import AvailableOffers from '../components/checkout/AvailableOffers'
 import QuantityControls from '../components/ui/QuantityControls'
+import CustomAlert from '../components/CustomAlert'
+import useAlert from '../hooks/useAlert'
 import { colors } from '../theme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CartScreen = () => {
   const navigation = useNavigation()
   const { user } = useAuthStore()
+  const { alert, showDestructive, showConfirm, showInfo, hideAlert } = useAlert()
   
   // Use Zustand selectors for optimal performance
   const cartItems = useCartStore((state) => state.items)
@@ -57,28 +60,36 @@ const CartScreen = () => {
   }
 
   const handleRemoveItem = (itemId) => {
-    Alert.alert("Remove Item", "Are you sure you want to remove this item from your cart?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => removeFromCart(itemId, user?.id) },
-    ])
+    showDestructive(
+      "Remove Item", 
+      "Are you sure you want to remove this item from your cart?",
+      () => removeFromCart(itemId, user?.id),
+      () => {},
+      "Remove"
+    )
   }
 
   const handleClearCart = () => {
-    Alert.alert("Clear Cart", "Are you sure you want to remove all items from your cart?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Clear All", style: "destructive", onPress: () => {
+    showDestructive(
+      "Clear Cart", 
+      "Are you sure you want to remove all items from your cart?",
+      () => {
         clearCart(user?.id)
         clearAll()
-      }},
-    ])
+      },
+      () => {},
+      "Clear All"
+    )
   }
 
   const handleCheckout = () => {
     if (!user) {
-      Alert.alert("Login Required", "Please login to proceed with checkout", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Login", onPress: () => navigation.navigate("Profile") },
-      ])
+      showConfirm(
+        "Login Required", 
+        "Please login to proceed with checkout",
+        () => navigation.navigate("Profile"),
+        () => {}
+      )
       return
     }
     navigation.navigate("Checkout")
@@ -353,6 +364,16 @@ const CartScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
+      
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alert.visible}
+        onClose={hideAlert}
+        title={alert.title}
+        message={alert.message}
+        buttons={alert.buttons}
+        type={alert.type}
+      />
     </SafeAreaView>
   )
 }
