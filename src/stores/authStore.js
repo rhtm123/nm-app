@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
+import { googleAuthService } from '../services/googleAuthService';
 
 const useAuthStore = create((set, get) => ({
   // State
@@ -150,6 +151,20 @@ const useAuthStore = create((set, get) => ({
     set({ isLoading: true });
     try {
       await authService.logout();
+      
+      // Sign out from Google if user was signed in with Google
+      try {
+        const isGoogleSignedIn = await googleAuthService.isSignedIn();
+        if (isGoogleSignedIn) {
+          const signOutResult = await googleAuthService.signOut();
+          if (!signOutResult.success) {
+            console.log('Google sign-out warning:', signOutResult.error);
+          }
+        }
+      } catch (googleError) {
+        // Non-critical error - don't prevent the main logout flow
+        console.log('Google sign-out error (non-critical):', googleError?.message || googleError);
+      }
       
       // Clear wishlist
       await get().clearWishlistOnLogout();

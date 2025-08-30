@@ -15,17 +15,21 @@ import { LightTheme, DarkTheme } from './src/theme';
 import { StatusBar, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import useAuthStore from './src/stores/authStore';
+import { googleAuthService } from './src/services/googleAuthService';
 
 import "./global.css"; // Ensure this is imported to apply global styles
 
 
 export default function App() {
     const [darkMode, setDarkMode] = useState(false); // toggle this with a button or switch
-    const checkAuthStatus = useAuthStore(state => state.checkAuthStatus);
+    const initializeAuth = useAuthStore(state => state.initializeAuth);
 
     useEffect(() => {
+        // Initialize Google Sign-In configuration
+        googleAuthService.configure();
+        
         // Initialize auth status when app starts
-        checkAuthStatus();
+        initializeAuth();
         
         // Ensure status bar is properly configured on both platforms
         if (Platform.OS === 'android') {
@@ -34,7 +38,7 @@ export default function App() {
         } else {
           StatusBar.setBarStyle('dark-content', true);
         }
-    }, [checkAuthStatus]);
+    }, [initializeAuth]);
 
   return (
     <>

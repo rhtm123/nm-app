@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import useAuthStore from '../stores/authStore';
-// import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-
-// const GOOGLE_WEB_CLIENT_ID = process.env.PUBLIC_GOOGLE_WEB_CLIENT_ID; // TODO: Replace with your actual web client ID
+import { googleAuthService } from '../services/googleAuthService';
 
 const LoginScreen = ({ onLogin }) => {
   const { loginWithPassword, register, loginWithGoogle, isLoading } = useAuthStore();
@@ -13,12 +12,28 @@ const LoginScreen = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
-  // useEffect(() => {
-  //   GoogleSignin.configure({
-  //     webClientId: GOOGLE_WEB_CLIENT_ID,
-  //     offlineAccess: false,
-  //   });
-  // }, []);
+  const handleGoogleLogin = async () => {
+    setError('');
+    try {
+      const googleResult = await googleAuthService.signIn();
+      
+      if (!googleResult.success) {
+        setError(googleResult.error || 'Google sign-in failed');
+        return;
+      }
+
+      // Use the ID token to authenticate with your backend
+      const result = await loginWithGoogle(googleResult.idToken);
+      
+      if (result.success) {
+        onLogin && onLogin();
+      } else {
+        setError(result.error || 'Google login failed');
+      }
+    } catch (error) {
+      setError(error.message || 'Google login failed');
+    }
+  };
 
   const handleLogin = async () => {
     setError('');
@@ -40,31 +55,6 @@ const LoginScreen = ({ onLogin }) => {
     }
   };
 
-  // const handleGoogleLogin = async () => {
-  //   setError('');
-  //   try {
-  //     await GoogleSignin.hasPlayServices();
-  //     const userInfo = await GoogleSignin.signIn();
-  //     const token = (await GoogleSignin.getTokens()).idToken;
-  //     if (!token) throw new Error('No Google token received');
-  //     const result = await loginWithGoogle(token);
-  //     if (result.success) {
-  //       onLogin && onLogin();
-  //     } else {
-  //       setError(result.error || 'Google login failed');
-  //     }
-  //   } catch (err) {
-  //     if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-  //       setError('Google sign in cancelled');
-  //     } else if (err.code === statusCodes.IN_PROGRESS) {
-  //       setError('Google sign in in progress');
-  //     } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-  //       setError('Google Play Services not available');
-  //     } else {
-  //       setError(err.message || 'Google login failed');
-  //     }
-  //   }
-  // };
 
   return (
     <View className="flex-1 justify-center items-center px-6 bg-gray-50">
@@ -164,17 +154,24 @@ const LoginScreen = ({ onLogin }) => {
           <View className="flex-1 h-px bg-gray-300" />
         </View>
 
-        {/* Google Sign In (Commented out for now) */}
-        {/*
+        {/* Google Sign In Button */}
         <TouchableOpacity
-          className="w-full border border-gray-300 rounded-xl py-4 items-center bg-white"
+          className="w-full border border-gray-300 rounded-xl py-4 items-center bg-white mb-4"
           onPress={handleGoogleLogin}
           disabled={isLoading}
           activeOpacity={0.8}
         >
-          <Text className="text-gray-700 font-medium">Continue with Google</Text>
+          {isLoading ? (
+            <ActivityIndicator color="#4285F4" size="small" />
+          ) : (
+            <View className="flex-row items-center">
+              <View className="w-5 h-5 mr-3 items-center justify-center">
+                <Text className="text-base font-bold" style={{color: '#4285F4'}}>G</Text>
+              </View>
+              <Text className="text-gray-700 font-medium">Continue with Google</Text>
+            </View>
+          )}
         </TouchableOpacity>
-        */}
         
         <View className="items-center mt-4">
           <Text className="text-gray-500 text-sm text-center">
