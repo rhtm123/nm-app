@@ -13,7 +13,7 @@ const STORAGE_KEYS = {
 
 class LocationService {
   constructor() {
-    this.estore_id = 2; // Hard-coded for Naigaon Market
+    this.estore_id = process.env.EXPO_PUBLIC_ESTORE_ID || 2; // Hard-coded for Naigaon Market
   }
 
   // Request location permissions

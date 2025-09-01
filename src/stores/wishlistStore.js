@@ -137,7 +137,7 @@ const useWishlistStore = create(
         console.log('Creating new wishlist for user:', userId);
         const newWishlistResponse = await apiClient.post(API_ENDPOINTS.WISHLISTS, {
           user_id: userId,
-          estore_id: 2 // Use hardcoded estore_id
+          estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2 // Use hardcoded estore_id
         });
         wishlist = newWishlistResponse.data;
         console.log('Created new wishlist:', wishlist.id);

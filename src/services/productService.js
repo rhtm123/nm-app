@@ -8,7 +8,7 @@ export const productService = {
       // Always filter for approved products and add estore_id
       const defaultParams = {
         approved: true,
-        estore_id: 2, // Based on your API example
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2, // Based on your API example
         page: 1,
         page_size: 10,
         ...params,
@@ -26,7 +26,7 @@ export const productService = {
     try {
       const defaultParams = {
         approved: true,
-        estore_id: 2,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         featured: true,
         page_size: 5,
         ...params,
@@ -66,7 +66,7 @@ export const productService = {
         params: {
           product_id: productId,
           approved: true,
-          estore_id: 2,
+          estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
           page_size: 50, // Get all variants
         },
       })
@@ -100,7 +100,7 @@ export const productService = {
   getCategories: async (params = {}) => {
     try {
       const defaultParams = {
-        estore_id: 2,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         category_type: 'product',
         has_blogs: false,
         page_size: 50,
@@ -119,7 +119,7 @@ export const productService = {
       const defaultParams = {
         category_id: categoryId,
         approved: true,
-        estore_id: 2,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         page: 1,
         page_size: 20,
         ...params,
@@ -138,7 +138,7 @@ export const productService = {
       const defaultParams = {
         brand_ids: Array.isArray(brandIds) ? brandIds.join(",") : brandIds,
         approved: true,
-        estore_id: 2,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         page: 1,
         page_size: 20,
         ...params,
@@ -157,7 +157,7 @@ export const productService = {
       const defaultParams = {
         search: searchQuery,
         approved: true,
-        estore_id: 2,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         page: 1,
         page_size: 20,
         ...params,
