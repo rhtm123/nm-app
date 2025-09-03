@@ -22,20 +22,24 @@ const useWishlistStore = create(
     // Debounced API operations to prevent excessive calls
     const debouncedAddToWishlist = debounce(async (productListing, wishlistId) => {
       try {
+        console.log('Making API call to add to wishlist:', productListing.name, 'wishlist ID:', wishlistId);
         const wishlistItemData = {
           wishlist_id: wishlistId,
           product_listing_id: productListing.id
         };
         const response = await apiClient.post(API_ENDPOINTS.WISHLIST_ITEMS, wishlistItemData);
+        console.log('API Response for wishlist add:', response.data);
         
         // Update the temporary item with real server data
         set(state => {
+          console.log('Updating temp item with real server data for product:', productListing.id);
           // Find the first temp item for this product and replace it
           let tempItemReplaced = false;
           const updatedItems = state.wishlistItems.map(item => {
             if (item.product_listing_id === productListing.id && 
                 item.id.toString().startsWith('temp_') && !tempItemReplaced) {
               tempItemReplaced = true;
+              console.log('Replacing temp item:', item.id, 'with real ID:', response.data.id);
               return {
                 ...response.data,
                 product_listing: productListing
@@ -52,12 +56,14 @@ const useWishlistStore = create(
           
           if (!hasRealItem && !tempItemReplaced) {
             // Add new item if no real item exists
+            console.log('Adding new real item since no temp item was found');
             updatedItems.push({
               ...response.data,
               product_listing: productListing
             });
           }
           
+          console.log('Updated wishlist items count:', updatedItems.length);
           return {
             wishlistItems: updatedItems
           };
@@ -66,19 +72,13 @@ const useWishlistStore = create(
         console.log('Added to wishlist (API):', productListing.name, 'Real ID:', response.data.id);
       } catch (error) {
         console.error('Error adding to wishlist (API):', error);
-        // Revert optimistic update on API failure
-        set(state => {
-          const newIds = new Set(state.wishlistItemIds);
-          newIds.delete(productListing.id);
-          return {
-            wishlistItems: state.wishlistItems.filter(item => 
-              item.product_listing_id !== productListing.id
-            ),
-            wishlistItemIds: newIds
-          };
-        });
+        console.error('API Error details:', error.response?.data);
+        
+        // Don't revert optimistic update on API failure - let user try again
+        // This prevents the frustrating experience of items disappearing
+        console.log('Keeping optimistic update despite API failure - user can try again');
       }
-    }, 300);
+    }, 500);
 
     const debouncedRemoveFromWishlist = debounce(async (productListingId, wishlistItem) => {
       try {
@@ -145,8 +145,9 @@ const useWishlistStore = create(
 
       set({ wishlistId: wishlist.id });
 
-      // Get wishlist items
-      await get().fetchWishlistItems();
+      // Don't automatically fetch items during initialization to prevent race conditions
+      // Items will be fetched on-demand when needed
+      console.log('Wishlist initialized without fetching items to prevent race conditions');
       
       return { success: true, wishlistId: wishlist.id };
 
@@ -169,6 +170,8 @@ const useWishlistStore = create(
       const response = await apiClient.get(`${API_ENDPOINTS.WISHLIST_ITEMS}?wishlist_id=${wishlistId}`);
       const items = response.data.results || [];
       
+      console.log('Raw wishlist items from API:', items.length, items);
+      
       // Deduplicate items by product_listing_id
       const uniqueItems = [];
       const seenIds = new Set();
@@ -182,26 +185,34 @@ const useWishlistStore = create(
       
       const itemIds = new Set(uniqueItems.map(item => item.product_listing_id));
       
+      // Preserve any temporary items that might be in progress
+      const currentState = get();
+      const tempItems = currentState.wishlistItems.filter(item => 
+        item.id && item.id.toString().startsWith('temp_')
+      );
+      
+      // Merge server items with any temporary items
+      const allItems = [...uniqueItems, ...tempItems];
+      const allItemIds = new Set([...itemIds, ...tempItems.map(item => item.product_listing_id)]);
+      
       set({ 
-        wishlistItems: uniqueItems,
-        wishlistItemIds: itemIds,
-        pendingOperations: new Set() // Clear pending operations on fresh fetch
+        wishlistItems: allItems,
+        wishlistItemIds: allItemIds,
+        // Don't clear pending operations here - let them complete naturally
       });
       
-      console.log('Fetched wishlist items:', uniqueItems.length, 'unique items');
+      console.log('Fetched wishlist items:', uniqueItems.length, 'server items,', tempItems.length, 'temp items, total:', allItems.length);
     } catch (error) {
       console.error('Error fetching wishlist items:', error);
-      set({ 
-        wishlistItems: [],
-        wishlistItemIds: new Set(),
-        pendingOperations: new Set()
-      });
+      // Don't clear existing items on fetch error - preserve optimistic updates
+      console.log('Preserving existing wishlist items due to fetch error');
     } finally {
       set({ isLoading: false });
     }
   },
 
   // Add item to wishlist (OPTIMISTIC UPDATE - INSTANT UI)
+  // NOTE: Stock status is INTENTIONALLY NOT checked here - out-of-stock products can be added to wishlist
   addToWishlist: (productListing) => {
     const { wishlistId, wishlistItems, wishlistItemIds, pendingOperations } = get();
     
@@ -216,6 +227,7 @@ const useWishlistStore = create(
     }
 
     // Double check if item is already in wishlist (prevent duplicates)
+    // NOTE: We do NOT check stock status here - users should be able to wishlist out-of-stock items
     const existingItem = wishlistItems.find(item => item.product_listing_id === productListing.id);
     if (existingItem || wishlistItemIds.has(productListing.id)) {
       console.log('Item already in wishlist:', productListing.name);

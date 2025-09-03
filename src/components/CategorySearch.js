@@ -52,7 +52,7 @@ const CategorySearch = ({ onSearch, placeholder = "Search categories...", showVi
     <View className="px-6 pb-4 flex-row items-center">
       {/* Search Bar */}
       <Animated.View
-        className="flex-1 bg-gray-50 rounded-lg flex-row items-center px-4 py-3 mr-3"
+        className="flex-1 bg-gray-50 rounded-lg flex-row items-center px-4 py-1 mr-3"
         style={{
           borderWidth: 1,
           borderColor: isFocused ? colors.primary : 'transparent',

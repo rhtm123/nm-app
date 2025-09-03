@@ -43,7 +43,7 @@ const Header = ({ title, showBack = false, showSearch = true, route, options }) 
                 {route && route.name !== 'MainTabs' ? headerTitle : (title || "Naigaon Market")}
               </Text>
               {(!route || route.name === 'MainTabs') && (
-                <Text className="text-xs text-gray-500">Delivering groceries in minutes</Text>
+                <Text className="text-xs text-gray-500">Delivering to your doorstep</Text>
               )}
             </View>
           </View>

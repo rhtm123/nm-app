@@ -2,7 +2,7 @@ import apiClient from "../config/apiClient"
 import { API_ENDPOINTS } from "../config/endpoints"
 
 // Default estore_id - you may want to make this configurable later
-const DEFAULT_ESTORE_ID = process.env.ESTORE_ID || 2;
+const DEFAULT_ESTORE_ID = process.env.EXPO_PUBLIC_ESTORE_ID || 2;
 
 export const searchService = {
   // Search Products

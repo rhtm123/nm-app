@@ -13,16 +13,28 @@ import { colors } from '../theme';
 const WishlistScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { wishlistItems, isLoading, fetchWishlistItems, removeFromWishlist, clearAllWishlistItems } = useWishlistStore();
+  const { wishlistItems, isLoading, fetchWishlistItems, removeFromWishlist, clearAllWishlistItems, wishlistId, ensureWishlistInitialized } = useWishlistStore();
   const { user, isAuthenticated } = useAuthStore();
   const addToCart = useCartStore((state) => state.addToCart);
   const getCartItemQuantity = useCartStore((state) => state.getCartItemQuantity);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      fetchWishlistItems();
+      // Only fetch if we don't have a wishlist initialized yet
+      // This prevents interference with optimistic updates
+      if (!wishlistId) {
+        ensureWishlistInitialized(user.id).then(() => {
+          // Only fetch if we have no items (first load)
+          if (wishlistItems.length === 0) {
+            fetchWishlistItems();
+          }
+        });
+      } else if (wishlistItems.length === 0) {
+        // Fetch items only if we have no items (prevents clearing optimistic updates)
+        fetchWishlistItems();
+      }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, wishlistId]);
 
   const handleAddToCart = async (productListing) => {
     try {

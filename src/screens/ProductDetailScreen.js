@@ -110,6 +110,9 @@ const ProductDetailScreen = () => {
       return;
     }
 
+    // Note: We intentionally allow out-of-stock products to be added to wishlist
+    // Stock status should not prevent wishlist operations
+    
     try {
       // Get store methods directly
       const store = useWishlistStore.getState();
@@ -121,7 +124,7 @@ const ProductDetailScreen = () => {
         return;
       }
       
-      // Get current state and toggle
+      // Get current state and toggle (works regardless of stock status)
       const wasInWishlist = store.isInWishlist(selectedVariant?.id);
       const result = await store.toggleWishlist(selectedVariant);
       

@@ -19,6 +19,9 @@ export const config = {
     baseUrl: REACT_APP_API_BASE_URL,
     timeout: parseInt(REACT_APP_API_TIMEOUT || '10000', 10),
   },
+  estoreId: {
+    id: REACT_APP_ESTORE_ID,
+  },
   google: {
     webClientId: PUBLIC_GOOGLE_WEB_CLIENT_ID,
   },

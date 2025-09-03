@@ -68,6 +68,9 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
       return;
     }
 
+    // Note: We intentionally allow out-of-stock products to be added to wishlist
+    // Stock status should not prevent wishlist operations
+    
     try {
       // Get store methods directly
       const store = useWishlistStore.getState();
@@ -79,7 +82,7 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
         return;
       }
       
-      // Get current state and toggle
+      // Get current state and toggle (works regardless of stock status)
       const wasInWishlist = store.isInWishlist(productListing.id);
       const result = await store.toggleWishlist(productListing);
       
@@ -117,30 +120,37 @@ const ProductCard = ({ productListing, onPress, className = "", style = {}, widt
         {/* Wishlist Icon - Heart for normal view, Close for wishlist view */}
         <TouchableOpacity
           style={{ 
-            backgroundColor: isWishlistView ? colors.error : colors.surface, 
+            backgroundColor: isWishlistView ? colors.error : 'rgba(255, 255, 255, 0.95)', 
             position: 'absolute', 
-            top: 6, 
-            right: 6,
-            borderRadius: isWishlistView ? 12 : 20,
-            width: isWishlistView ? 24 : 32,
-            height: isWishlistView ? 24 : 32,
+            top: 8, 
+            right: 8,
+            borderRadius: isWishlistView ? 12 : 18,
+            width: isWishlistView ? 28 : 36,
+            height: isWishlistView ? 28 : 36,
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'center',
+            zIndex: 10, // Ensure it's above the out of stock overlay
+            elevation: 5, // For Android
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            borderWidth: 1,
+            borderColor: isProductInWishlist ? colors.error : 'rgba(0,0,0,0.1)'
           }}
-          className={isWishlistView ? "" : "rounded-full p-1.5 shadow-sm"}
           onPress={handleWishlistToggle}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={isWishlistView ? "close" : (isProductInWishlist ? "heart" : "heart-outline")}
-            size={isWishlistView ? 14 : 14}
-            color={isWishlistView ? "white" : (isProductInWishlist ? colors.error : colors.text.secondary)}
+            size={isWishlistView ? 16 : 18}
+            color={isWishlistView ? "white" : (isProductInWishlist ? colors.error : '#666666')}
           />
         </TouchableOpacity>
         
         {!inStock && (
-          <View className="absolute inset-0 bg-black/50 items-center justify-center">
-            <Text style={{ color: colors.text.white }} className="text-xs font-medium">Out of Stock</Text>
+          <View style={{ zIndex: 5 }} className="absolute inset-0 bg-black/40 items-center justify-center">
+            <Text style={{ color: colors.text.white }} className="text-sm font-semibold bg-black/60 px-3 py-1 rounded-full">Out of Stock</Text>
           </View>
         )}
       </View>
