@@ -21,6 +21,23 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        
+        <!-- Deep Link Intent Filters -->
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="naigaonmarketapp" />
+        </intent-filter>
+        
+        <!-- Custom URL scheme for payment redirect -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="naigaonmarketapp"
+                  android:host="payment" />
+        </intent-filter>
       </activity>
     </application>
 </manifest>

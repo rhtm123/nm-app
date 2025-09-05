@@ -48,5 +48,26 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	
+	<!-- URL Schemes for Deep Linking -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>naigaonmarketapp.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>naigaonmarketapp</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>naigaonmarketapp.payment</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>naigaonmarketapp</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

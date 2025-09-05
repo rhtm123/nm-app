@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from "react-native"
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Linking, Platform } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import useCartStore from "../stores/cartStore"
@@ -248,7 +248,7 @@ const CheckoutScreen = () => {
       
       console.log('Placing order with data:', {
         user_id: user?.id,
-        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 1,
+        estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         shipping_address_id: selectedAddress.id,
         offer_id: appliedOffer?.id || null,
         coupon_id: appliedCoupon?.id || null,
@@ -301,13 +301,21 @@ const CheckoutScreen = () => {
         }
       }
 
-      // Create payment
+      // Create payment with platform information
       const paymentData = {
         order_id: order.id,
         amount: finalTotal,
         payment_gateway: paymentMethod === "pg" ? "PhonePe" : null,
         estore_id: process.env.EXPO_PUBLIC_ESTORE_ID || 2,
         payment_method: paymentMethod,
+        // NEW: Add platform and device info for mobile payments
+        platform: 'mobile',
+        device_info: {
+          platform: 'react-native',
+          os: Platform.OS,
+          app_version: '1.0.0',
+          screen_name: 'CheckoutScreen'
+        }
       };
 
       console.log('Creating payment:', paymentData);

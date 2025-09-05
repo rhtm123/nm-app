@@ -16,6 +16,7 @@ import { StatusBar, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import useAuthStore from './src/stores/authStore';
 import { googleAuthService } from './src/services/googleAuthService';
+import deepLinkManager from './src/utils/DeepLinkManager';
 
 import "./global.css"; // Ensure this is imported to apply global styles
 
@@ -31,6 +32,9 @@ export default function App() {
         // Initialize auth status when app starts
         initializeAuth();
         
+        // Initialize deep link manager for payment callbacks
+        deepLinkManager.initialize();
+        
         // Ensure status bar is properly configured on both platforms
         if (Platform.OS === 'android') {
           StatusBar.setBackgroundColor('#ffffff', true);
@@ -38,6 +42,11 @@ export default function App() {
         } else {
           StatusBar.setBarStyle('dark-content', true);
         }
+        
+        // Cleanup function
+        return () => {
+          deepLinkManager.cleanup();
+        };
     }, [initializeAuth]);
 
   return (
